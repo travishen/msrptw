@@ -4,7 +4,7 @@ from __future__ import print_function
 from sqlalchemy import create_engine
 from contextlib import contextmanager
 from . import _base, _session
-from .model import Config, Market, Part, Route
+from .model import Config, Market, Part, Origin
 
 engine = None
 
@@ -55,19 +55,29 @@ def init():
             Part(name='黃豆')
         ]
 
+        session.add(chicken)
+        session.add(pork)
+        session.add(bean)
+
         geant = Market(name='愛買')
         wellcome = Market(name='頂好')
         rtmart = Market(name='大潤發')
         fengkang = Market(name='楓康')
 
-        session.add(chicken)
-        session.add(pork)
         session.add(geant)
-        session.add(bean)
-
         session.add(wellcome)
         session.add(rtmart)
         session.add(fengkang)
+
+        tw = Origin(name='台灣')
+        au = Origin(name='澳洲')
+        us = Origin(name='美國')
+        other = Origin(name='其他')
+
+        session.add(tw)
+        session.add(au)
+        session.add(us)
+        session.add(other)
 
 
 @contextmanager
