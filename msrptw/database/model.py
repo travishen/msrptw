@@ -4,7 +4,6 @@ from __future__ import print_function
 from sqlalchemy import Integer, Column, ForeignKey, Sequence, String, Unicode, Date, DateTime, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from json import JSONEncoder
 from . import _base
 
 

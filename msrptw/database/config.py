@@ -52,10 +52,18 @@ def init():
             Part(name='排骨')
         ]
 
-        bean = Config(name='豆類')
+        bean = Config(name='雜貨/豆類')
         bean.parts = [
             Part(name='紅豆'),
             Part(name='黃豆')
+        ]
+
+        veg = Config(name='蔬菜')
+        veg.parts = [
+            Part(name='玉米筍'),
+            Part(name='金絲菇'),
+            Part(name='薑'),
+            Part(name='洋蔥')
         ]
 
         session.add(chicken)
