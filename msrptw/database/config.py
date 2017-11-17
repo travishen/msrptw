@@ -31,13 +31,16 @@ def init():
             Part(name='骨腿'),
             Part(name='腿肉'),
             Part(name='棒腿'),
-            Part(name='腿排')
+            Part(name='腿排'),
+            Part(name='雞翅(二節)'),
+            Part(name='雞翅(三節)')
         ]
 
         pork = Config(name='豬肉')
         pork.parts = [
-            Part(name='五花肉'),
-            Part(name='梅花肉'),
+            Part(name='腹脇肉(五花)'),
+            Part(name='肩胛肉(梅花)'),
+            Part(name='肩頸肉(霜降/松坂/雪花)'),
             Part(name='豬小排'),
             Part(name='里肌肉'),
             Part(name='豬腿肉'),
