@@ -4,16 +4,18 @@ import abc
 import requests
 import re
 import sys
+import datetime
+import logging
 from lxml import html
-from .database.config import session_scope
+from logging.config import fileConfig
 from sqlalchemy.orm import subqueryload
+from .database.config import session_scope
 from .database.model import Market, Product, Config, Origin, Price
 from . import _logging_config_path
-import logging
-from logging.config import fileConfig
 
 fileConfig(_logging_config_path)
 log = logging.getLogger(__name__)
+
 
 class MarketBrowser(object):
     __metaclass__ = abc.ABCMeta
@@ -36,6 +38,22 @@ class MarketBrowser(object):
         3: '放棄定義產品%s'
     }
 
+    ORIGIN_MAP = {
+        '臺灣': '台灣', '澳洲': '澳洲',
+    }
+
+    UNIT_MAP = {
+        'KG': (0, 1000), 'G': (1, 1)
+    }
+
+    UNIT_RE = re.compile('''
+        (?:
+            (?P<kg>.*)KG | (?P<g>.*)G
+        )
+    ''', re.X)
+
+    STACK = []
+
     @abc.abstractstaticmethod
     def get_product_urls(self):
         return
@@ -45,7 +63,6 @@ class MarketBrowser(object):
         return
 
     def config_generator(self, product_map):
-
         for config in self.configs:
             log.info(MarketBrowser.INFO_MAP[0] % (self.market.name, config.name))
             try:
@@ -62,22 +79,30 @@ class MarketBrowser(object):
                 # return self if not exists
                 product = self.check_product(product)
                 if not product.id:
-                    product = self.classify_product(config, product)
-                    product.track = False
-                    self.set_product(product)
-                else:
-                    product.track = True
+                    MarketBrowser.STACK.append((self.market, config, product, price))
+                elif product.track:
                     price.product = product
                     self.set_price(price)
+
+    @classmethod
+    def clear_stack(cls):
+        for market, config, product, price in cls.STACK:
+            product = MarketBrowser.classify_product(market, config, product)
+            if product.track:
+                price.product = product
+                MarketBrowser.set_price(price)
+            else:
+                MarketBrowser.set_product(product)
+        cls.STACK = []
 
     @staticmethod
     def set_product(product):
         with session_scope() as session:
             session.add(product)
 
-    @staticmethod
-    def get_weight(unit_map, token):
-        for index, multiplier in unit_map.values():
+    @classmethod
+    def get_weight(cls, token):
+        for index, multiplier in cls.UNIT_MAP.values():
             unit_value = token[index]
             if unit_value:
                 try:
@@ -87,7 +112,8 @@ class MarketBrowser(object):
                     return None
                 return unit_value * multiplier
 
-    def classify_product(self, config, product):
+    @staticmethod
+    def classify_product(market, config, product):
         def decode(s):
             encoding = sys.stdin.encoding
             return s.encode(encoding, 'replace').decode(encoding)
@@ -95,10 +121,11 @@ class MarketBrowser(object):
         while True:
             options = ''.join('(%s): %s ' % (i, part.name) for i, part in enumerate(config.parts))
             options = decode(options)
-            i = input(MarketBrowser.INFO_MAP[1] % (self.market.name, product.name, options))
+            i = input(MarketBrowser.INFO_MAP[1] % (market.name, product.name, options))
 
             if not i:
                 log.info(MarketBrowser.INFO_MAP[3] % product.name)
+                product.track = False
                 break
             else:
                 try:
@@ -109,6 +136,7 @@ class MarketBrowser(object):
                 if i in range(config.parts.__len__() + 1):
                     selected_config = config.parts[i]
                     product.part_id = selected_config.id
+                    product.track = True
                     log.info(MarketBrowser.INFO_MAP[2] % (product.name, selected_config.name))
                     break
         return product
@@ -126,17 +154,18 @@ class MarketBrowser(object):
     @staticmethod
     def set_price(price):
         with session_scope() as session:
-            db_price = session.query(Price).filter(Price.date == price.date).filter(Price.product_id == price.product_id).first()
+            db_price = session.query(Price).filter(Price.date == price.date).filter(Price.product_id == price.product.id).first()
             if db_price:
                 db_price.price = price.price
                 db_price.weight = price.weight
             else:
                 session.add(price)
 
-    def get_origin(self, map_str):
-        return [o for o in self.origins if o.name == map_str]
+    def get_origin(self, origin_str):
+        return [o for o in self.origins if o.name == MarketBrowser.ORIGIN_MAP[origin_str]]
 
     def __init__(self, market_name):
+        self.date = datetime.date.today().strftime('%Y-%m-%d')
         with session_scope() as session:
             self.configs = session.query(Config).options(subqueryload(Config.parts)).all()
             self.origins = session.query(Origin).all()
@@ -154,20 +183,6 @@ class Wellcome(MarketBrowser):
     PRODUCT_MAP = {
         '雞肉': '13', '豬肉': '14'
     }
-
-    ORIGIN_MAP = {
-        '臺灣': '台灣', '澳洲': '澳洲',
-    }
-
-    UNIT_MAP = {
-        'KG': (0, 1000), 'G': (1, 1)
-    }
-
-    UNIT_RE = re.compile('''
-        (?:
-            (?P<kg>.*)KG | (?P<g>.*)G
-        )
-    ''', re.X)
 
     NAME_RE = re.compile('''
             (.*?)\d
@@ -195,10 +210,9 @@ class Wellcome(MarketBrowser):
         try:
             name = Wellcome.NAME_RE.findall(name_str)[0]
             weight_token = Wellcome.UNIT_RE.findall(weight_str)
-            weight = self.get_weight(Wellcome.UNIT_MAP, weight_token[0])
+            weight = self.get_weight(weight_token[0])
             pid = MarketBrowser.NUM_RE.findall(url)[-1]
-            map_str = Wellcome.ORIGIN_MAP[origin_str]
-            origin_ins = self.get_origin(map_str)[0]
+            origin_ins = self.get_origin(origin_str)[0]
             weight = int(weight)
             price = int(price_str)
         except:

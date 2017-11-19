@@ -54,7 +54,8 @@ class Product(_base):
 
 class Price(_base):
     __tablename__ = 'price'
-    product_id = Column(Integer, ForeignKey('product.id'), primary_key=True)
+    id = Column(Integer, Sequence('price_id_seq'), primary_key=True, nullable=False)
+    product_id = Column(Integer, ForeignKey('product.id'))
     product = relationship('Product', back_populates='prices')
     price = Column(Integer)
     weight = Column(Integer)
