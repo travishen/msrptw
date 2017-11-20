@@ -21,6 +21,15 @@ class Part(_base):
     config = relationship('Config', back_populates='parts')
     products = relationship('Product')
     name = Column(Unicode(15))
+    aliases = relationship('Alias')
+
+
+class Alias(_base):
+    __tablename__ = 'alias'
+    id = Column(Integer, Sequence('alias_id_seq'), primary_key=True, nullable=False)
+    part_id = Column(Integer, ForeignKey('part.id'))
+    part = relationship('Part', back_populates='aliases')
+    name = Column(Unicode(15))
 
 
 class Market(_base):
