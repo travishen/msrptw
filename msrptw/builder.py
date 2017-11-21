@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 from argparse import ArgumentParser
 from .database import config
-from .marketbrowser import MarketBrowser, Wellcome, Geant
+from .marketbrowser import MarketBrowser, WellcomeBrowser, FengKangBrowser, GeantBrowser, RtmartBrowser
 
 
 def build(db_path, setup):
@@ -12,10 +12,14 @@ def build(db_path, setup):
         config.setup_session(db_path)
         if setup:
             config.init()
-        w = Wellcome()
-        g = Geant()
-        w.direct(Wellcome.PRODUCT_MAP)
-        g.direct(Geant.PRODUCT_MAP)
+        w = WellcomeBrowser()
+        g = GeantBrowser()
+        f = FengKangBrowser()
+        r = RtmartBrowser()
+        # w.direct(WellcomeBrowser.PRODUCT_MAP)
+        g.direct(GeantBrowser.PRODUCT_MAP)
+        f.direct(FengKangBrowser.PRODUCT_MAP)
+        r.direct(RtmartBrowser.PRODUCT_MAP)
         MarketBrowser.clear_stack()
 
 

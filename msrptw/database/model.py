@@ -30,6 +30,7 @@ class Alias(_base):
     part_id = Column(Integer, ForeignKey('part.id'))
     part = relationship('Part', back_populates='aliases')
     name = Column(Unicode(15))
+    anti = Column(Boolean, default=False)
 
 
 class Market(_base):
