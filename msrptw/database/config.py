@@ -115,7 +115,8 @@ def init():
         groceries.parts = [
             Part(name='紅豆', aliases=[
                 Alias(name='豆仁', anti=True),
-                Alias(name='大紅豆', anti=True)
+                Alias(name='大紅豆', anti=True),
+                Alias(name='紅豆薏仁', anti=True)
             ]),
             Part(name='黃豆', aliases=[
                 Alias(name='豆仁', anti=True),
@@ -133,7 +134,8 @@ def init():
                 Alias(name='大紅豆', anti=True)
             ]),
             Part(name='薏仁', aliases=[
-                Alias(name='大薏仁')
+                Alias(name='大薏仁'),
+                Alias(name='紅豆薏仁', anti=True)
             ]),
             Part(name='其他雜糧', aliases=[
                 Alias(name='蓮子'),
@@ -144,7 +146,8 @@ def init():
                 Alias(name='糯米'),
                 Alias(name='藜麥'),
                 Alias(name='枸杞'),
-                Alias(name='麥仁')
+                Alias(name='麥仁'),
+                Alias(name='紅豆薏仁')
             ]),
             Part(name='花生', aliases=[
                 Alias(name='土豆')
