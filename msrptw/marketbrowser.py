@@ -99,7 +99,7 @@ class MarketBrowser(object):
                 product = self.check_product(product)
                 if not product.id:
                     MarketBrowser.STACK.append((config, product, price))
-                else:
+                elif product.part_id:
                     price.product = product
                     self.set_price(price)
 
@@ -117,8 +117,11 @@ class MarketBrowser(object):
     @classmethod
     def clear_stack(cls):
         def set_product_price(pd, pc):
-            pc.product = pd
-            MarketBrowser.set_price(pc)
+            if pd.part_id:
+                pc.product = pd
+                MarketBrowser.set_price(pc)
+            else:
+                MarketBrowser.set_product(pd)
 
         manuals = []
 
