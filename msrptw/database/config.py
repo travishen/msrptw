@@ -29,6 +29,7 @@ def init():
                 Alias(name='黃土雞'),
                 Alias(name='土雞'),
                 Alias(name='烏骨雞'),
+                Alias(name='古早雞'),
                 Alias(name='切塊', anti=True),
                 Alias(name='胸', anti=True),
                 Alias(name='翅', anti=True),
@@ -81,6 +82,7 @@ def init():
             Part(name='豬肩頸肉', aliases=[
                 Alias(name='霜降'),
                 Alias(name='松坂'),
+                Alias(name='松阪'),
                 Alias(name='雪花')
             ]),
             Part(name='豬小排', aliases=[
@@ -188,7 +190,8 @@ def init():
             Part(name='結球白菜', aliases=[
                 Alias(name='包心白菜'),
                 Alias(name='大白菜'),
-                Alias(name='娃娃菜')
+                Alias(name='娃娃菜'),
+                Alias(name='萵苣')
             ]),
             Part(name='芥藍', aliases=[
                 Alias(name='格藍菜'),
@@ -320,9 +323,14 @@ def init():
 
         fruit = Config(name='水果')
         fruit.parts = [
-            Part(name='芭樂'),
+            Part(name='芭樂', aliases=[
+                Alias(name='番石榴')
+            ]),
             Part(name='檸檬'),
-            Part(name='番茄'),
+            Part(name='番茄', aliases=[
+                Alias(name='蕃茄')
+
+            ]),
             Part(name='木瓜'),
             Part(name='葡萄'),
             Part(name='鳳梨'),
@@ -331,8 +339,10 @@ def init():
             Part(name='香蕉'),
             Part(name='百香果'),
             Part(name='柳丁'),
-            Part(name='哈密瓜', aliases=[
-                Alias(name='洋香瓜')
+            Part(name='哈蜜瓜', aliases=[
+                Alias(name='洋香瓜'),
+                Alias(name='哈密瓜'),
+                Alias(name='華蜜瓜')
             ]),
             Part(name='葡萄柚'),
             Part(name='楊桃'),
@@ -340,7 +350,14 @@ def init():
             Part(name='椪柑'),
             Part(name='甜柿', aliases=[
                 Alias(name='柿')
-            ])
+            ]),
+            Part(name='蓮霧'),
+            Part(name='橘子', aliases=[
+                Alias(name='桔子'),
+                Alias(name='柑子')
+            ]),
+            Part(name='蘋果'),
+            Part(name='奇異果')
         ]
 
         session.add(chicken)

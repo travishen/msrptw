@@ -473,7 +473,7 @@ class RtmartBrowser(MarketBrowser):
     }
 
     NAME_RE = re.compile('''
-        (?:.+?)(?=\d+.*|$)
+        (?:.+?)(?=\d+.*|\W+.*|$)
     ''', re.X)
 
     ORIGIN_RE = re.compile('''
