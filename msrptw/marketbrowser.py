@@ -10,6 +10,7 @@ import urllib.parse as urlparse
 from lxml import html
 from logging.config import fileConfig
 from sqlalchemy.orm import subqueryload
+from pathos.pools import _ThreadPool
 from .database.config import session_scope
 from .database.model import Market, Product, Config, Origin, Price, Part
 from . import _logging_config_path
@@ -89,18 +90,26 @@ class MarketBrowser(object):
                 log.error(MarketBrowser.ERROR_MAP[1])
 
     def direct(self):
-        for config, urls in self.config_generator(self.PRODUCT_MAP):
-            for url in urls:
-                product, price = self.get_product_price(url)
-                if not product and not price:
-                    continue
-                # return self if not exists
-                product = self.check_product(product)
-                if not product.id:
-                    MarketBrowser.STACK.append((config, product, price))
-                elif product.part_id:
-                    price.product = product
-                    self.set_price(price)
+
+        def browse_each(config, url):
+            product, price = self.get_product_price(url)
+            if not product and not price:
+                return
+            # return self if not exists
+            product = self.check_product(product)
+            if not product.id:
+                MarketBrowser.STACK.append((config, product, price))
+            elif product.part_id:
+                price.product = product
+                self.set_price(price)
+            return
+
+        pool = _ThreadPool(4)
+        for c, urls in self.config_generator(self.PRODUCT_MAP):
+            for u in urls:
+                pool.apply_async(browse_each, args=(c, u))
+        pool.close()
+        pool.join()
 
     @classmethod
     def clear_stack(cls):
