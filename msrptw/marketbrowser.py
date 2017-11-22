@@ -10,9 +10,8 @@ import urllib.parse as urlparse
 from lxml import html
 from logging.config import fileConfig
 from sqlalchemy.orm import subqueryload
-from multiprocessing import Pool, cpu_count
 from .database.config import session_scope
-from .database.model import Market, Product, Config, Origin, Price, Part, Alias
+from .database.model import Market, Product, Config, Origin, Price, Part
 from . import _logging_config_path
 
 
@@ -89,8 +88,8 @@ class MarketBrowser(object):
             except KeyError:
                 log.error(MarketBrowser.ERROR_MAP[1])
 
-    def direct(self, product_map):
-        def browse_each(config, urls):
+    def direct(self):
+        for config, urls in self.config_generator(self.PRODUCT_MAP):
             for url in urls:
                 product, price = self.get_product_price(url)
                 if not product and not price:
@@ -102,17 +101,6 @@ class MarketBrowser(object):
                 elif product.part_id:
                     price.product = product
                     self.set_price(price)
-
-        cpu = cpu_count()
-        pool = Pool(processes=cpu)
-        results = []
-        for c, u in self.config_generator(product_map):
-            process = pool.apply_async(browse_each(c, u))
-            results.append(process)
-        for process in results:
-            process.wait()
-        pool.close()
-        pool.join()
 
     @classmethod
     def clear_stack(cls):
@@ -242,6 +230,8 @@ class MarketBrowser(object):
         return parsed_page
 
     def __init__(self, market_name):
+        if not self.PRODUCT_MAP or not self.NAME:
+            raise NotImplementedError
         self.date = datetime.date.today().strftime('%Y-%m-%d')
         with session_scope() as session:
             self.configs = session.query(Config).options(subqueryload(Config.parts).subqueryload(Part.aliases)).all()

@@ -16,10 +16,10 @@ def build(db_path, setup):
         g = GeantBrowser()
         f = FengKangBrowser()
         r = RtmartBrowser()
-        w.direct(WellcomeBrowser.PRODUCT_MAP)
-        g.direct(GeantBrowser.PRODUCT_MAP)
-        f.direct(FengKangBrowser.PRODUCT_MAP)
-        r.direct(RtmartBrowser.PRODUCT_MAP)
+        w.direct()
+        g.direct()
+        f.direct()
+        r.direct()
         MarketBrowser.clear_stack()
 
 
