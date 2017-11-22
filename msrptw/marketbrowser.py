@@ -10,6 +10,7 @@ import urllib.parse as urlparse
 from lxml import html
 from logging.config import fileConfig
 from sqlalchemy.orm import subqueryload
+from multiprocessing import Pool, cpu_count
 from .database.config import session_scope
 from .database.model import Market, Product, Config, Origin, Price, Part, Alias
 from . import _logging_config_path
@@ -89,7 +90,7 @@ class MarketBrowser(object):
                 log.error(MarketBrowser.ERROR_MAP[1])
 
     def direct(self, product_map):
-        for config, urls in self.config_generator(product_map):
+        def browse_each(config, urls):
             for url in urls:
                 product, price = self.get_product_price(url)
                 if not product and not price:
@@ -98,18 +99,26 @@ class MarketBrowser(object):
                 product = self.check_product(product)
                 if not product.id:
                     MarketBrowser.STACK.append((config, product, price))
-                elif product.track:
+                else:
                     price.product = product
                     self.set_price(price)
+
+        cpu = cpu_count()
+        pool = Pool(processes=cpu)
+        results = []
+        for c, u in self.config_generator(product_map):
+            process = pool.apply_async(browse_each(c, u))
+            results.append(process)
+        for process in results:
+            process.wait()
+        pool.close()
+        pool.join()
 
     @classmethod
     def clear_stack(cls):
         def set_product_price(pd, pc):
-            if pd.track:
-                pc.product = pd
-                MarketBrowser.set_price(pc)
-            else:
-                MarketBrowser.set_product(pd)
+            pc.product = pd
+            MarketBrowser.set_price(pc)
 
         manuals = []
 
@@ -157,7 +166,6 @@ class MarketBrowser(object):
                 if alias.name in product.name and alias.anti:
                     find = False
             if find:
-                product.track = True
                 product.part_id = part.id
                 log.info(MarketBrowser.INFO_MAP[4] % (product.name, part.name))
                 return product
@@ -176,7 +184,6 @@ class MarketBrowser(object):
 
             if not i:
                 log.info(MarketBrowser.INFO_MAP[3] % product.name)
-                product.track = False
                 break
             else:
                 try:
@@ -186,7 +193,6 @@ class MarketBrowser(object):
                     continue
                 if i in range(config.parts.__len__()):
                     product.part_id = config.parts[i].id
-                    product.track = True
                     log.info(MarketBrowser.INFO_MAP[2] % (product.name, config.parts[i].name))
                     break
         return product
@@ -391,7 +397,7 @@ class FengKangBrowser(MarketBrowser):
     }
 
     NAME_RE = re.compile('''
-        (?:.+?)(?=\d+.*|約.*|$)
+        (?:.+?)(?=\d+.*|約.*|\W+.*|$)
     ''', re.X)
 
     PID_RE = re.compile('''

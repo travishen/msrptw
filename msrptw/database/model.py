@@ -58,7 +58,6 @@ class Product(_base):
     origin = relationship('Origin', back_populates='products')
     name = Column(Unicode(30))
     pid = Column(String(20))
-    track = Column(Boolean)
     prices = relationship('Price')
 
 
