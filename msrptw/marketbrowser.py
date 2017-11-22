@@ -11,6 +11,7 @@ from lxml import html
 from logging.config import fileConfig
 from sqlalchemy.orm import subqueryload
 from pathos.pools import _ThreadPool
+from pathos.multiprocessing import cpu_count
 from .database.config import session_scope
 from .database.model import Market, Product, Config, Origin, Price, Part
 from . import _logging_config_path
@@ -104,7 +105,8 @@ class MarketBrowser(object):
                 self.set_price(price)
             return
 
-        pool = _ThreadPool(4)
+        cpu = cpu_count()
+        pool = _ThreadPool(cpu)
         for c, urls in self.config_generator(self.PRODUCT_MAP):
             for u in urls:
                 pool.apply_async(browse_each, args=(c, u))
@@ -475,7 +477,7 @@ class RtmartBrowser(MarketBrowser):
     }
 
     NAME_RE = re.compile('''
-        (?:.+?)(?=\d+.*|\W+.*|$)
+        (?:.+?)(?=\d+.*|\(約+.*|$)
     ''', re.X)
 
     ORIGIN_RE = re.compile('''
