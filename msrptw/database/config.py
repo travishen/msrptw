@@ -30,7 +30,7 @@ def init():
                 Alias(name='土雞'),
                 Alias(name='烏骨雞'),
                 Alias(name='古早雞'),
-                Alias(name='切塊', anti=True),
+                Alias(name='塊', anti=True),
                 Alias(name='胸', anti=True),
                 Alias(name='翅', anti=True),
                 Alias(name='腿', anti=True)
