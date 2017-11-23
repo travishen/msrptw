@@ -4,6 +4,7 @@ Source:
 * [愛買](http://www.gohappy.com.tw/shopping/Browse.do?op=vc&cid=31581&sid=12)
 * [大潤發](http://www.rt-mart.com.tw/fresh/)
 * [楓康](http://shop.supermarket.com.tw/)
+* [HonestBee](https://www.honestbee.tw/)
 
 Usage
 -----
