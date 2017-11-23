@@ -4,7 +4,8 @@ from __future__ import print_function
 import sys
 from argparse import ArgumentParser
 from .database import config
-from .marketbrowser import MarketBrowser, WellcomeBrowser, FengKangBrowser, GeantBrowser, RtmartBrowser
+from .directory import Directory
+from . import marketbrowser, honestbee
 
 
 def build(db_path, setup):
@@ -12,15 +13,25 @@ def build(db_path, setup):
         config.setup_session(db_path)
         if setup:
             config.init()
-        w = WellcomeBrowser()
-        g = GeantBrowser()
-        f = FengKangBrowser()
-        r = RtmartBrowser()
+
+        w = marketbrowser.WellcomeBrowser()
+        g = marketbrowser.GeantBrowser()
+        f = marketbrowser.FengKangBrowser()
+        r = marketbrowser.RtmartBrowser()
         w.direct()
         g.direct()
         f.direct()
         r.direct()
-        MarketBrowser.clear_stack()
+
+        r = honestbee.Rtmart()
+        c = honestbee.Carrefour()
+        b = honestbee.BinJung()
+        n = honestbee.NewTaipeiCenter()
+        r.direct()
+        c.direct()
+        b.direct()
+        n.direct()
+        Directory.clear_stack()
 
 
 def parse_args(args):

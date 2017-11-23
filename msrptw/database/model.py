@@ -24,6 +24,7 @@ class Part(_base):
     aliases = relationship('Alias')
 
 
+
 class Alias(_base):
     __tablename__ = 'alias'
     id = Column(Integer, Sequence('alias_id_seq'), primary_key=True, nullable=False)
@@ -31,12 +32,13 @@ class Alias(_base):
     part = relationship('Part', back_populates='aliases')
     name = Column(Unicode(15))
     anti = Column(Boolean, default=False)
+    products = relationship('Product')
 
 
 class Market(_base):
     __tablename__ = 'market'
     id = Column(Integer, Sequence('market_id_seq'), primary_key=True, nullable=False)
-    name = Column(Unicode(5))
+    name = Column(Unicode(10))
     products = relationship('Product')
 
 
@@ -56,8 +58,11 @@ class Product(_base):
     market = relationship('Market', back_populates='products')
     origin_id = Column(Integer, ForeignKey('origin.id'))
     origin = relationship('Origin', back_populates='products')
+    alias_id = Column(Integer, ForeignKey('alias.id'))
+    alias = relationship('Alias', back_populates='products')
     name = Column(Unicode(30))
     pid = Column(String(20))
+    source = Column(String(255))
     prices = relationship('Price')
 
 
@@ -89,7 +94,8 @@ class Log(_base):
         return self.__repr__()
 
     def __repr__(self):
-        return "<Log: %s - %s>" % (self.created_at.strftime('%m/%d/%Y-%H:%M:%S'), self.msg[:50])
+
+        return '<Log: %s - %s>' % (self.created_at.strftime('%m/%d/%Y-%H:%M:%S'), self.msg[:50])
 
 
 

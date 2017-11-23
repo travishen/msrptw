@@ -35,49 +35,58 @@ def init():
                 Alias(name='翅', anti=True),
                 Alias(name='腿', anti=True)
             ]),
+            Part(name='半雞', aliases=[
+                Alias(name='半')
+            ]),
             Part(name='雞胸肉', aliases=[
-                Alias(name='胸肉')
+                Alias(name='胸肉'),
+                Alias(name='雞胸')
             ]),
             Part(name='雞里肌肉', aliases=[
                 Alias(name='里肌')
             ]),
-            Part(name='雞骨腿肉', aliases=[
-                Alias(name='骨腿')
+            Part(name='雞腿肉', aliases=[
+                Alias(name='骨腿'),
+                Alias(name='清腿'),
+                Alias(name='棒腿'),
+                Alias(name='小腿'),
+                Alias(name='腿排'),
+                Alias(name='去骨雞腿'),
+                Alias(name='翅', anti=True)
             ]),
-            Part(name='雞清腿肉', aliases=[
-                Alias(name='清腿')
-            ]),
-            Part(name='雞棒腿肉', aliases=[
-                Alias(name='棒棒腿'),
-                Alias(name='棒腿')
-            ]),
-            Part(name='雞腿排肉', aliases=[
-                Alias(name='腿排')
-            ]),
-            Part(name='雞翅(二節)', aliases=[
-                Alias(name='二節翅')
-            ]),
-            Part(name='雞翅(三節)', aliases=[
-                Alias(name='三節翅')
-            ]),
-            Part(name='雞翅腿肉', aliases=[
+            Part(name='雞翅', aliases=[
+                Alias(name='二節翅'),
+                Alias(name='三節翅'),
                 Alias(name='翅小腿'),
                 Alias(name='翅腿')
             ]),
             Part(name='雞切塊', aliases=[
                 Alias(name='切塊'),
                 Alias(name='剁塊'),
-                Alias(name='腿切塊')
+                Alias(name='腿切塊'),
+                Alias(name='八塊'),
+                Alias(name='九塊')
+            ]),
+            Part(name='雞雜', aliases=[
+                Alias(name='雞肫'),
+                Alias(name='雞心'),
+                Alias(name='雞尾椎'),
+                Alias(name='雞屁股'),
+                Alias(name='雞尾椎'),
+                Alias(name='雞胗')
             ])
         ]
 
         pork = Config(name='豬肉')
         pork.parts = [
             Part(name='豬腹脇肉', aliases=[
-                Alias(name='五花')
+                Alias(name='五花'),
+                Alias(name='三層')
             ]),
             Part(name='豬肩胛肉', aliases=[
-                Alias(name='梅花')
+                Alias(name='梅花'),
+                Alias(name='胛心'),
+                Alias(name='胛心排', anti=True)
             ]),
             Part(name='豬肩頸肉', aliases=[
                 Alias(name='霜降'),
@@ -85,17 +94,15 @@ def init():
                 Alias(name='松阪'),
                 Alias(name='雪花')
             ]),
-            Part(name='豬小排', aliases=[
-                Alias(name='豬排'),
-                Alias(name='豬小排')
-            ]),
             Part(name='豬里肌肉', aliases=[
-                Alias(name='里肌')
+                Alias(name='里肌'),
+                Alias(name='腰內')
             ]),
             Part(name='豬腿肉', aliases=[
                 Alias(name='腿肉'),
                 Alias(name='腿'),
-                Alias(name='腱子')
+                Alias(name='腱子'),
+                Alias(name='豬蹄膀')
             ]),
             Part(name='豬絞肉', aliases=[
                 Alias(name='絞肉')
@@ -108,14 +115,16 @@ def init():
                 Alias(name='肉絲'),
                 Alias(name='肉條'),
             ]),
-            Part(name='豬軟骨', aliases=[
-                Alias(name='軟骨')
-            ]),
-            Part(name='豬肋骨', aliases=[
-                Alias(name='肋骨')
-            ]),
             Part(name='豬排骨', aliases=[
-                Alias(name='排骨')
+                Alias(name='排骨'),
+                Alias(name='龍骨'),
+                Alias(name='背骨'),
+                Alias(name='肋骨'),
+                Alias(name='軟骨'),
+                Alias(name='大骨'),
+                Alias(name='頸骨'),
+                Alias(name='胛心排'),
+                Alias(name='豬小排')
             ])
         ]
 
@@ -159,7 +168,15 @@ def init():
             ]),
             Part(name='花生', aliases=[
                 Alias(name='土豆')
-            ])
+            ]),
+            Part(name='昆布'),
+            Part(name='乾香菇', aliases=[
+                Alias(name='香菇'),
+                Alias(name='鈕釦菇')
+            ]),
+            Part(name='木耳'),
+            Part(name='奇亞籽'),
+            Part(name='柴魚')
         ]
 
         veg = Config(name='蔬菜')
@@ -179,19 +196,24 @@ def init():
             Part(name='不結球白菜', aliases=[
                 Alias(name='小白菜'),
                 Alias(name='青江菜'),
+                Alias(name='青江白菜'),
                 Alias(name='葉白菜'),
                 Alias(name='奶油白菜'),
                 Alias(name='翠白菜'),
                 Alias(name='味美菜'),
                 Alias(name='小松菜'),
-                Alias(name='青松菜')
+                Alias(name='青松菜'),
+                Alias(name='蚵白菜'),
+                Alias(name='蚵仔白菜')
             ]),
-
             Part(name='結球白菜', aliases=[
                 Alias(name='包心白菜'),
                 Alias(name='大白菜'),
-                Alias(name='娃娃菜'),
-                Alias(name='萵苣')
+                Alias(name='娃娃菜')
+            ]),
+            Part(name='萵苣', aliases=[
+                Alias(name='A菜'),
+                Alias(name='大陸妹')
             ]),
             Part(name='芥藍', aliases=[
                 Alias(name='格藍菜'),
@@ -202,7 +224,8 @@ def init():
                 Alias(name='地瓜葉', anti=True)
             ]),
             Part(name='青蔥', aliases=[
-                Alias(name='蔥頭', anti=True)
+                Alias(name='蔥頭', anti=True),
+                Alias(name='三星蔥')
             ]),
             Part(name='玉米', aliases=[
                 Alias(name='玉米筍', anti=True)
@@ -245,11 +268,23 @@ def init():
                 Alias(name='舞菇')
             ]),
             Part(name='芋頭'),
-            Part(name='韭菜'),
+            Part(name='韭菜', aliases=[
+                Alias(name='韭菜花')
+            ]),
+            Part(name='韭菜花'),
             Part(name='高麗菜', aliases=[
                 Alias(name='高麗菜絲', anti=True),
+                Alias(name='脫水', anti=True),
+                Alias(name='紫', anti=True),
                 Alias(name='甘藍'),
-                Alias(name='脫水', anti=True)
+                Alias(name='菜心')
+            ]),
+            Part(name='紫高麗菜', aliases=[
+                Alias(name='高麗菜絲', anti=True),
+                Alias(name='脫水', anti=True),
+                Alias(name='紫甘藍'),
+                Alias(name='紫色甘藍'),
+                Alias(name='紫高麗菜'),
             ]),
             Part(name='木耳'),
             Part(name='大頭菜'),
@@ -263,7 +298,10 @@ def init():
                 Alias(name='菠薐菜'),
             ]),
             Part(name='茼蒿'),
-            Part(name='苦瓜'),
+            Part(name='苦瓜', aliases=[
+                Alias(name='青苦瓜'),
+                Alias(name='山苦瓜')
+            ]),
             Part(name='牛蕃茄', aliases=[
                 Alias(name='牛番茄')
             ]),
@@ -276,12 +314,15 @@ def init():
                 Alias(name='豆芽')
             ]),
             Part(name='油菜'),
-            Part(name='辣椒'),
+            Part(name='辣椒', aliases=[
+                Alias(name='朝天椒'),
+                Alias(name='剝皮辣椒'),
+                Alias(name='糯米椒')
+            ]),
             Part(name='芥菜', aliases=[
                 Alias(name='雪菜')
             ]),
             Part(name='莧菜'),
-            Part(name='A菜'),
             Part(name='苜蓿芽'),
             Part(name='秋葵'),
             Part(name='香菜', aliases=[
@@ -289,21 +330,32 @@ def init():
             ]),
             Part(name='九層塔'),
             Part(name='牛蒡'),
-            Part(name='胡瓜', aliases=[
-                Alias(name='小黃瓜')
+            Part(name='小黃瓜', aliases=[
+                Alias(name='花胡瓜')
+            ]),
+            Part(name='大黃瓜', aliases=[
+                Alias(name='胡瓜'),
+                Alias(name='刺瓜'),
+                Alias(name='黃瓜'),
+                Alias(name='小黃瓜', anti=True)
             ]),
             Part(name='蒜頭', aliases=[
                 Alias(name='大蒜')
             ]),
+            Part(name='紅蔥頭'),
             Part(name='冬瓜'),
             Part(name='洋菇'),
             Part(name='蘆筍'),
             Part(name='甜菜根'),
             Part(name='銀耳'),
             Part(name='水蓮'),
-            Part(name='扁蒲', aliases=[
+            Part(name='蓮藕'),
+            Part(name='蒲瓜', aliases=[
                 Alias(name='蒲子'),
-                Alias(name='扁浦')
+                Alias(name='扁浦'),
+                Alias(name='扁蒲'),
+                Alias(name='瓠瓜'),
+                Alias(name='蒲瓜')
             ]),
             Part(name='豌豆', aliases=[
                 Alias(name='荷蘭豆'),
@@ -316,9 +368,15 @@ def init():
             Part(name='菜豆', aliases=[
                 Alias(name='長豇豆')
             ]),
+            Part(name='甜豆'),
             Part(name='豆苗', aliases=[
                 Alias(name='豆嬰')
-            ])
+            ]),
+            Part(name='芥蘭'),
+            Part(name='皇宮菜'),
+            Part(name='龍鬚菜'),
+            Part(name='山蘇'),
+            Part(name='紅鳳菜')
         ]
 
         fruit = Config(name='水果')
@@ -339,11 +397,6 @@ def init():
             Part(name='香蕉'),
             Part(name='百香果'),
             Part(name='柳丁'),
-            Part(name='哈蜜瓜', aliases=[
-                Alias(name='洋香瓜'),
-                Alias(name='哈密瓜'),
-                Alias(name='華蜜瓜')
-            ]),
             Part(name='葡萄柚'),
             Part(name='楊桃'),
             Part(name='釋迦'),
@@ -357,7 +410,16 @@ def init():
                 Alias(name='柑子')
             ]),
             Part(name='蘋果'),
-            Part(name='奇異果')
+            Part(name='奇異果'),
+            Part(name='甜瓜', aliases=[
+                Alias(name='香瓜'),
+                Alias(name='洋香瓜'),
+                Alias(name='哈蜜瓜'),
+                Alias(name='華蜜瓜'),
+                Alias(name='哈密瓜'),
+                Alias(name='美濃瓜')
+            ]),
+            Part(name='金桔')
         ]
 
         session.add(chicken)
@@ -366,26 +428,36 @@ def init():
         session.add(veg)
         session.add(fruit)
 
-        geant = Market(name='愛買')
-        wellcome = Market(name='頂好')
-        rtmart = Market(name='大潤發')
-        fengkang = Market(name='楓康')
+        g = Market(name='愛買')
+        w = Market(name='頂好')
+        r = Market(name='大潤發')
+        f = Market(name='楓康')
+        c = Market(name='家樂福')
+        b = Market(name='濱江')
+        n = Market(name='新北市農產中心')
 
-        session.add(geant)
-        session.add(wellcome)
-        session.add(rtmart)
-        session.add(fengkang)
+        session.add(g)
+        session.add(w)
+        session.add(r)
+        session.add(f)
+        session.add(c)
+        session.add(b)
+        session.add(n)
 
         tw = Origin(name='臺灣')
         au = Origin(name='澳洲')
         us = Origin(name='美國')
         cn = Origin(name='中國')
+        jp = Origin(name='日本')
+        kr = Origin(name='韓國')
         other = Origin(name='其他')
 
         session.add(tw)
         session.add(au)
         session.add(us)
         session.add(cn)
+        session.add(jp)
+        session.add(kr)
         session.add(other)
 
 

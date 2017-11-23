@@ -3,72 +3,23 @@
 import abc
 import requests
 import re
-import sys
-import datetime
 import logging
 import urllib.parse as urlparse
 from lxml import html
 from logging.config import fileConfig
-from sqlalchemy.orm import subqueryload
 from pathos.pools import _ThreadPool
 from pathos.multiprocessing import cpu_count
-from .database.config import session_scope
-from .database.model import Market, Product, Config, Origin, Price, Part
+from .database.model import Product, Price
 from . import _logging_config_path
+from .directory import Directory
 
 
 fileConfig(_logging_config_path)
 log = logging.getLogger(__name__)
 
 
-class MarketBrowser(object):
+class MarketBrowser(Directory):
     __metaclass__ = abc.ABCMeta
-
-    NUM_RE = re.compile('''
-            (?:\d+)
-    ''', re.X)
-
-    ERROR_MAP = {
-        0: '商品重量單位轉換失敗',
-        1: '找不到相對應的品項媒合值',
-        2: '定義商品部位輸入無效的字串',
-        3: '處理文本%s發生溢位或值錯誤\n請查看原始頁面:(%s)',
-        4: '訪問商品頁面(%s)請求逾時'
-    }
-
-    INFO_MAP = {
-        0: '訪問%s取得所有%s商品',
-        1: '無法自動分類商品「%s」，產地%s，請定義產品類型或放棄(Enter)\n%s:',
-        2: '將商品%s人工定義為%s',
-        3: '放棄定義商品%s',
-        4: '將商品%s自動定義為%s'
-    }
-
-    ORIGIN_MAP = {
-        '臺北': '臺灣', '臺中': '臺灣', '基隆': '臺灣', '臺南': '臺灣', '高雄': '臺灣', '新北': '臺灣', '宜蘭': '臺灣',
-        '桃園': '臺灣', '嘉義': '臺灣', '新竹': '臺灣', '苗栗': '臺灣', '南投': '臺灣', '彰化': '臺灣', '雲林': '臺灣',
-        '屏東': '臺灣', '花蓮': '臺灣', '臺東': '臺灣', '金門': '臺灣', '澎湖': '臺灣', '臺灣': '臺灣',
-        '臺中豐原': '台灣', '屏東里港': '臺灣', '雲林莿桐': '臺灣', '西螺': '臺灣', '臺南佳里': '臺灣',
-        '屏東萬丹': '臺灣', '美濃': '臺灣', '臺中大甲': '臺灣', '南投埔里': '臺灣',
-        '澳洲': '澳洲',
-        '中國': '中國',
-        '美國': '美國'
-    }
-
-    UNIT_MAP = {
-        'KG': (0, 1000), 'G': (1, 1), 'g': (1, 1), 'kg': (0, 1000), 'Kg': (0, 1000),
-        '公斤': (0, 1000), '公克': (1, 1), '克': (1, 1)
-    }
-
-    UNIT_RE = re.compile('''
-        (?:
-            (?P<kg>\d+?.\d+|\d+)(?=KG|kg|Kg|公斤)
-            |
-            (?P<g>\d+?.\d+|\d+)(?=G|g|公克|克)
-        )
-    ''', re.X)
-
-    STACK = []
 
     @abc.abstractstaticmethod
     def get_product_urls(self):
@@ -78,17 +29,17 @@ class MarketBrowser(object):
     def get_product_price(self):
         return
 
-    def config_generator(self, product_map):
+    def config_generator(self):
         for config in self.configs:
             log.info(MarketBrowser.INFO_MAP[0] % (self.market.name, config.name))
             urls = []
             try:
-                map_strs = product_map[config.name]
+                map_strs = self.PRODUCT_MAP[config.name]
                 for map_str in map_strs:
                     urls += self.get_product_urls(map_str)
                 yield config, urls
             except KeyError:
-                log.error(MarketBrowser.ERROR_MAP[1])
+                log.error(Directory.ERROR_MAP[1] % config.name)
 
     def direct(self):
 
@@ -99,7 +50,7 @@ class MarketBrowser(object):
             # return self if not exists
             product = self.check_product(product)
             if not product.id:
-                MarketBrowser.STACK.append((config, product, price))
+                Directory.STACK.append((config, product, price))
             elif product.part_id:
                 price.product = product
                 self.set_price(price)
@@ -107,128 +58,11 @@ class MarketBrowser(object):
 
         cpu = cpu_count()
         pool = _ThreadPool(cpu)
-        for c, urls in self.config_generator(self.PRODUCT_MAP):
+        for c, urls in self.config_generator():
             for u in urls:
                 pool.apply_async(browse_each, args=(c, u))
         pool.close()
         pool.join()
-
-    @classmethod
-    def clear_stack(cls):
-        def set_product_price(pd, pc):
-            if pd.part_id:
-                pc.product = pd
-                MarketBrowser.set_price(pc)
-            else:
-                MarketBrowser.set_product(pd)
-
-        manuals = []
-
-        for config, product, price in cls.STACK:
-            product = MarketBrowser.classify_product_auto(config, product)
-            if product.part_id:
-                set_product_price(product, price)
-            else:
-                manuals.append((config, product, price))
-
-        for config, product, price in manuals:
-            product = MarketBrowser.classify_product_manual(config, product)
-            if product.part_id:
-                set_product_price(product, price)
-
-        cls.STACK = []
-
-    @staticmethod
-    def set_product(product):
-        with session_scope() as session:
-            session.add(product)
-
-    @classmethod
-    def get_weight(cls, token):
-        for index, multiplier in cls.UNIT_MAP.values():
-            unit_value = token[index]
-            if unit_value:
-                try:
-                    unit_value = float(unit_value)
-                except ValueError:
-                    log.error(MarketBrowser.ERROR_MAP[0])
-                    return None
-                return unit_value * multiplier
-
-    @staticmethod
-    def classify_product_auto(config, product):
-        for part in config.parts:
-            find = False
-            if part.name in product.name:
-                find = True
-            for alias in part.aliases:
-                if alias.name in product.name and not alias.anti:
-                    find = True
-            for alias in part.aliases:
-                if alias.name in product.name and alias.anti:
-                    find = False
-            if find:
-                product.part_id = part.id
-                log.info(MarketBrowser.INFO_MAP[4] % (product.name, part.name))
-                return product
-        return product
-
-    @staticmethod
-    def classify_product_manual(config, product):
-        def decode(s):
-            encoding = sys.stdin.encoding
-            return s.encode(encoding, 'replace').decode(encoding)
-
-        while True:
-            options = ''.join('(%s): %s ' % (i, part.name) for i, part in enumerate(config.parts))
-            options = decode(options)
-            i = input(MarketBrowser.INFO_MAP[1] % (product.name, product.origin.name, options))
-
-            if not i:
-                log.info(MarketBrowser.INFO_MAP[3] % product.name)
-                break
-            else:
-                try:
-                    i = int(i)
-                except ValueError:
-                    log.error(MarketBrowser.ERROR_MAP[2])
-                    continue
-                if i in range(config.parts.__len__()):
-                    product.part_id = config.parts[i].id
-                    log.info(MarketBrowser.INFO_MAP[2] % (product.name, config.parts[i].name))
-                    break
-        return product
-
-    @staticmethod
-    def check_product(product):
-        with session_scope() as session:
-            db_product = session.query(Product).filter(Product.pid == product.pid).filter(Product.market_id == product.market_id).first()
-            if db_product:
-                # update product here  if needed
-                session.expunge(db_product)
-                return db_product
-            return product
-
-    @staticmethod
-    def set_price(price):
-        with session_scope() as session:
-            db_price = session.query(Price).filter(Price.date == price.date).filter(Price.product_id == price.product.id).first()
-            if db_price:
-                db_price.price = price.price
-                db_price.weight = price.weight
-            else:
-                session.add(price)
-
-    @staticmethod
-    def get_origin(origin_str):
-        with session_scope() as session:
-            try:
-                origin_str = MarketBrowser.ORIGIN_MAP[origin_str]
-                origin = session.query(Origin).filter(Origin.name == origin_str).first()
-            except KeyError:
-                origin = session.query(Origin).filter(Origin.name == '其他').first()
-            session.expunge(origin)
-        return origin
 
     @staticmethod
     def get_html(url):
@@ -236,18 +70,9 @@ class MarketBrowser(object):
             res = requests.get(url, timeout=15)
             parsed_page = html.fromstring(res.content)
         except requests.exceptions.Timeout:
-            log.error(MarketBrowser.ERROR_MAP[4] % url)
+            log.error(Directory.ERROR_MAP[4] % url)
             return html.Element('html')
         return parsed_page
-
-    def __init__(self, market_name):
-        if not self.PRODUCT_MAP or not self.NAME:
-            raise NotImplementedError
-        self.date = datetime.date.today().strftime('%Y-%m-%d')
-        with session_scope() as session:
-            self.configs = session.query(Config).options(subqueryload(Config.parts).subqueryload(Part.aliases)).all()
-            self.market = session.query(Market).filter(Market.name == market_name).first()
-            session.expunge_all()
 
 
 class WellcomeBrowser(MarketBrowser):
@@ -268,7 +93,7 @@ class WellcomeBrowser(MarketBrowser):
     ''', re.X)
 
     def __init__(self):
-        super(WellcomeBrowser, self).__init__(WellcomeBrowser.NAME)
+        super(WellcomeBrowser, self).__init__()
 
     @staticmethod
     def get_product_urls(map_str):
@@ -286,17 +111,17 @@ class WellcomeBrowser(MarketBrowser):
 
         try:
             name = WellcomeBrowser.NAME_RE.findall(name_str)[0]
-            weight_token = MarketBrowser.UNIT_RE.findall(weight_str)
-            weight = self.get_weight(weight_token[0])
-            pid = MarketBrowser.NUM_RE.findall(url)[-1]
+            weight = self.get_weight(weight_str)
+            pid = Directory.NUM_RE.findall(url)[-1]
             origin = self.get_origin(origin_str)
             weight = int(weight)
             price = int(price_str)
         except:
-            log.error(MarketBrowser.ERROR_MAP[3] % (name_str, url))
+            # logging.exception('msg')
+            log.error(Directory.ERROR_MAP[3] % (name_str, url))
             return None, None
 
-        product = Product(name=name, origin=origin, market_id=self.market.id, pid=pid)
+        product = Product(source=WellcomeBrowser.INDEX_ROUTE, name=name, origin=origin, market_id=self.market.id, pid=pid)
         price = Price(price=price, weight=weight, date=self.date)
         return product, price
 
@@ -331,7 +156,7 @@ class GeantBrowser(MarketBrowser):
     ''', re.X)
 
     def __init__(self):
-        super(GeantBrowser, self).__init__(GeantBrowser.NAME)
+        super(GeantBrowser, self).__init__()
 
     @staticmethod
     def get_product_urls(map_str):
@@ -341,8 +166,6 @@ class GeantBrowser(MarketBrowser):
         return [GeantBrowser.INDEX_ROUTE + url for url in set(urls)]
 
     def get_product_price(self, url):
-        def replace(s):
-            return re.sub(r'台', '臺', s)
         page = MarketBrowser.get_html(url)
         name_str = ''.join(page.xpath('''
             //div[@class="product_content"]//tr[contains(string(), "商品")]/td[2]//text()
@@ -363,24 +186,23 @@ class GeantBrowser(MarketBrowser):
                 ''')).strip()
 
             count_str = GeantBrowser.COUNT_RE.findall(intro_str)[0]
-            count = MarketBrowser.NUM_RE.findall(count_str)[0]
+            count = Directory.NUM_RE.findall(count_str)[0]
 
             weight_str = GeantBrowser.WEIGHT_RE.findall(intro_str)[0]
-            weight_token = MarketBrowser.UNIT_RE.findall(weight_str)
-            weight = self.get_weight(weight_token[0])
+            weight = self.get_weight(weight_str)
             weight = int(weight) * int(count)
 
             pid = urlparse.parse_qs(url)['pid'][0]
 
-            origin_str = replace(origin_str)
+            origin_str = Directory.normalize(origin_str)
             origin = self.get_origin(origin_str)
 
             price = int(price_str)
         except:
-            log.error(MarketBrowser.ERROR_MAP[3] % (name_str, url))
+            log.error(Directory.ERROR_MAP[3] % (name_str, url))
             return None, None
 
-        product = Product(name=name, origin=origin, market_id=self.market.id, pid=pid)
+        product = Product(source=GeantBrowser.INDEX_ROUTE ,name=name, origin=origin, market_id=self.market.id, pid=pid)
         price = Price(price=price, weight=weight, date=self.date)
         return product, price
 
@@ -417,7 +239,7 @@ class FengKangBrowser(MarketBrowser):
     ''', re.X)
 
     def __init__(self):
-        super(FengKangBrowser, self).__init__(FengKangBrowser.NAME)
+        super(FengKangBrowser, self).__init__()
 
     @staticmethod
     def get_product_urls(map_str):
@@ -427,8 +249,6 @@ class FengKangBrowser(MarketBrowser):
         return [FengKangBrowser.INDEX_ROUTE + url for url in set(urls)]
 
     def get_product_price(self, url):
-        def replace(s):
-            return re.sub(r'台', '臺', s)
         page = MarketBrowser.get_html(url)
         name_weight_str = ''.join(page.xpath('//div[@class="vw"]/div[@class="tt21"]/text()')).strip()
         price_str = ''.join(page.xpath('//div[@class="vw"]/div[@class="tt23"]//h4/text()')).strip()
@@ -436,13 +256,12 @@ class FengKangBrowser(MarketBrowser):
         try:
             name = FengKangBrowser.NAME_RE.findall(name_weight_str)[0]
 
-            weight_token = MarketBrowser.UNIT_RE.findall(name_weight_str)
-            weight = self.get_weight(weight_token[0])
+            weight = self.get_weight(name_weight_str)
             weight = int(weight)
 
             pid = FengKangBrowser.PID_RE.findall(url)[0]
 
-            origin_str = replace(origin_str)
+            origin_str = Directory.normalize(origin_str)
             origin_str = FengKangBrowser.ORIGIN_RE.findall(origin_str)[0]
             origin = self.get_origin(origin_str)
 
@@ -455,10 +274,10 @@ class FengKangBrowser(MarketBrowser):
             except IndexError:
                 pass
         except:
-            log.error(MarketBrowser.ERROR_MAP[3] % (name_weight_str, url))
+            log.error(Directory.ERROR_MAP[3] % (name_weight_str, url))
             return None, None
 
-        product = Product(name=name, origin=origin, market_id=self.market.id, pid=pid)
+        product = Product(source=FengKangBrowser.INDEX_ROUTE ,name=name, origin=origin, market_id=self.market.id, pid=pid)
         price = Price(price=price, weight=weight, date=self.date)
         return product, price
 
@@ -489,7 +308,7 @@ class RtmartBrowser(MarketBrowser):
     ''', re.X)
 
     def __init__(self):
-        super(RtmartBrowser, self).__init__(RtmartBrowser.NAME)
+        super(RtmartBrowser, self).__init__()
 
     @staticmethod
     def get_product_urls(map_str):
@@ -499,8 +318,6 @@ class RtmartBrowser(MarketBrowser):
         return [url for url in set(urls)]
 
     def get_product_price(self, url):
-        def replace(s):
-            return re.sub(r'台', '臺', s)
         page = MarketBrowser.get_html(url)
         name_str = ''.join(page.xpath('//div[@class="pro_rightbox"]/h2[@class="product_Titlename"]/span/text()')).strip()
         price_str = ''.join(page.xpath('//div[@class="product_PRICEBOX"]//span[@class="price_num"]/text()')).strip()
@@ -508,14 +325,13 @@ class RtmartBrowser(MarketBrowser):
         try:
             name = RtmartBrowser.NAME_RE.findall(name_str)[0]
 
-            intro_str = replace(intro_str)
+            intro_str = Directory.normalize(intro_str)
 
             try:
                 weight_str = RtmartBrowser.WEIGHT_RE.findall(intro_str)[0]
             except IndexError:
                 weight_str = name_str
-            weight_token = MarketBrowser.UNIT_RE.findall(weight_str)
-            weight = self.get_weight(weight_token[0])
+            weight = self.get_weight(weight_str)
             weight = int(weight)
 
             pid = urlparse.parse_qs(url)['prod_no'][0]
@@ -528,14 +344,14 @@ class RtmartBrowser(MarketBrowser):
                     origin_str = u'臺灣'
             origin = self.get_origin(origin_str)
 
-            price_str = MarketBrowser.NUM_RE.findall(price_str)[0]
+            price_str = Directory.NUM_RE.findall(price_str)[0]
             price = int(price_str)
 
         except:
-            log.error(MarketBrowser.ERROR_MAP[3] % (name_str, url))
+            log.error(Directory.ERROR_MAP[3] % (name_str, url))
             return None, None
 
-        product = Product(name=name, origin=origin, market_id=self.market.id, pid=pid)
+        product = Product(source=RtmartBrowser.INDEX_ROUTE, name=name, origin=origin, market_id=self.market.id, pid=pid)
         price = Price(price=price, weight=weight, date=self.date)
         return product, price
 
