@@ -25,8 +25,6 @@ def init():
         chicken = Config(name='雞肉')
         chicken.parts = [
             Part(name='全雞', aliases=[
-                Alias(name='大土雞'),
-                Alias(name='黃土雞'),
                 Alias(name='土雞'),
                 Alias(name='烏骨雞'),
                 Alias(name='古早雞'),
