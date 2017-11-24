@@ -1,32 +1,185 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+import abc
 import requests
-import logging
 import json
-import sys
-import datetime
+import logging
+import re
+from lxml import html
 from logging.config import fileConfig
-from sqlalchemy.orm import subqueryload
-from .database.config import session_scope
+from pathos.pools import _ThreadPool
+from pathos.multiprocessing import cpu_count
 from . import _logging_config_path
-from .database.model import Market, Product, Config, Price, Part
+from .database.model import Product, Price
 from .directory import Directory
 
 fileConfig(_logging_config_path)
 log = logging.getLogger(__name__)
 
 
-class HonestBee(Directory):
+class MarketApi(Directory):
+    """MarketApi class use products getter api from website,
+    loads response json with Product and Price class and do
+    further with Directory methods"""
+    __meta__ = abc.ABCMeta
+
+    @abc.abstractstaticmethod
+    def api(self):
+        return
+
+    @abc.abstractmethod
+    def get_products_prices(self):
+        return
+
+    def direct(self):
+
+        def browse_each(config):
+
+            log.info(Directory.INFO_MAP[0] % (self.market.name, config.name))
+
+            try:
+
+                map_strs = self.PRODUCT_MAP[config.name]
+
+                for map_str in map_strs:
+
+                    results = self.get_products_prices(map_str)
+
+                    for product, price in results:
+
+                        product = Directory.check_product(product)
+
+                        if not product.id:
+                            Directory.STACK.append((config, product, price))
+
+                        elif product.part_id:
+                            price.product = product
+                            Directory.set_price(price)
+
+            except KeyError:
+                log.error(Directory.ERROR_MAP[1] % config.name)
+
+        cpu = cpu_count()
+        pool = _ThreadPool(cpu)
+        for c in self.configs:
+            pool.apply_async(browse_each, args=(c, ))
+        pool.close()
+        pool.join()
+
+
+class CarrfourBrowser(MarketApi):
+
+    NAME = '家樂福'
+
+    API_ROUTE = 'https://online.carrefour.com.tw/Catalog/CategoryJson'
+    INDEX_ROUTE = 'https://online.carrefour.com.tw'
+
+    # (category_id, size)
+    PRODUCT_MAP = {
+        '雞肉': [('206', 35)], '豬肉': [('201', 35)],
+        '蔬菜': [('215', 15), ('216', 15), ('217', 15), ('218', 15), ('219', 15), ('220', 15),
+               ('224', 35), ('223', 15), ('222', 15), ('221', 15)],
+        '水果': [('231', 70)],
+        '雜貨': [('471', 100), ('522', 20), ('527', 20)]
+    }
+
+    NAME_RE = re.compile('''
+        (?:.+?)(?=[\d-]+.*|$)
+    ''', re.X)
+
+    @staticmethod
+    def api(category_id, size, hook=None):
+        params = {
+            'categoryId': category_id,
+            'orderBy': 21,
+            'pageIndex': 1,
+            'pageSize': size
+        }
+        res = requests.post(CarrfourBrowser.API_ROUTE, params=params)
+        dic = json.loads(res.text, object_hook=hook)
+        return dic['content']['ProductListModel']
+
+    def get_products_prices(self, map_str):
+
+        def hook(dic):
+
+            if not dic.get('Price'):
+                return dic
+
+            try:
+                name_str = dic.get('Name')
+                price_str = dic.get('Price')
+                special_price = dic.get('SpecialPrice')
+                amount_str = dic.get('ItemQtyPerPack')
+                origin_route = dic.get('SeName')
+
+                pid = str(dic.get('Id'))
+                name = CarrfourBrowser.NAME_RE.findall(name_str)[0]
+                weight = Directory.get_weight(name_str)
+
+                if special_price:
+                    price = float(special_price)
+                else:
+                    price = float(price_str)
+
+                weight = weight * float(amount_str)
+
+                product_url = CarrfourBrowser.INDEX_ROUTE + origin_route
+                origin_str = CarrfourBrowser.get_origin(product_url)
+
+                origin = Directory.get_origin(origin_str, default='其他')
+
+            except:
+                d = {
+                    'Name': name_str,
+                    'ItemQtyPerPack': amount_str,
+                    'Price': price_str
+                }
+                log.error(Directory.ERROR_MAP[5] % d)
+                return dic
+
+            price = Price(price=price,
+                          date=self.date)
+
+            product = Product(source=CarrfourBrowser.INDEX_ROUTE,
+                              name=name,
+                              market_id=self.market.id,
+                              pid=pid,
+                              origin=origin,
+                              weight=weight)
+
+            return product, price
+
+        results = []
+
+        ps = self.api(category_id=map_str[0],
+                      size=map_str[1],
+                      hook=hook)
+
+        for item in ps:
+            try:
+                if isinstance(item[0], Product) and isinstance(item[1], Price):
+                    results.append(item)
+            except KeyError:
+                pass
+
+        return results
+
+    @staticmethod
+    def get_origin(url):
+        res = requests.get(url)
+        parsed_page = html.fromstring(res.content)
+        origin_str = ''.join(parsed_page.xpath(
+            '//div[@id="pro-content2"]//div[contains(string(), "商品來源")]/following-sibling::div[1]/text()'
+        ))
+        return origin_str
+
+
+class HonestBee(MarketApi):
 
     INDEX_ROUTE = 'https://www.honestbee.tw/zh-TW'
     API_ROUTE = 'https://www.honestbee.tw/api/api/departments/%s'
-
-    STACK = []
-
-    INFO_MAP = {
-        0: '訪問HonestBee的%s取得所有%s商品',
-    }
 
     def __init__(self, **args):
         super(HonestBee, self).__init__()
@@ -91,14 +244,14 @@ class HonestBee(Directory):
                 return dic
 
             price = Price(price=price,
-                          weight=weight,
                           date=self.date)
 
             product = Product(source=HonestBee.INDEX_ROUTE,
                               name=name,
                               market_id=self.market.id,
                               pid=pid,
-                              origin=origin)
+                              origin=origin,
+                              weight=weight)
 
             return product, price
 
@@ -106,7 +259,7 @@ class HonestBee(Directory):
 
         page = map_str[2]
 
-        for i in range(1, page+1):
+        for i in range(1, page + 1):
 
             ps = self.api(config_id=map_str[0],
                           store_id=self.STORE_ID,
@@ -115,45 +268,17 @@ class HonestBee(Directory):
                           header=self.header,
                           hook=hook)
 
-            try:
-                for item in ps:
+            for item in ps:
+                try:
                     if isinstance(item[0], Product) and isinstance(item[1], Price):
                         results.append(item)
-            except KeyError:
-                pass
+                except KeyError:
+                    pass
+
         return results
-
-    def direct(self):
-
-        for config in self.configs:
-
-            log.info(HonestBee.INFO_MAP[0] % (self.market.name, config.name))
-
-            try:
-
-                map_strs = self.PRODUCT_MAP[config.name]
-
-                for map_str in map_strs:
-
-                    results = self.get_products_prices(map_str)
-
-                    for product, price in results:
-
-                        product = Directory.check_product(product)
-
-                        if not product.id:
-                            Directory.STACK.append((config, product, price))
-
-                        elif product.part_id:
-                            price.product = product
-                            Directory.set_price(price)
-
-            except KeyError:
-                log.error(Directory.ERROR_MAP[1] % config.name)
 
 
 class Rtmart(HonestBee):
-
     NAME = '大潤發'
 
     STORE_ID = 243
@@ -175,7 +300,6 @@ class Rtmart(HonestBee):
 
 
 class Carrefour(HonestBee):
-
     NAME = '家樂福'
 
     STORE_ID = 74
@@ -193,7 +317,6 @@ class Carrefour(HonestBee):
 
 
 class BinJung(HonestBee):
-
     NAME = '濱江'
 
     STORE_ID = 435
@@ -213,7 +336,6 @@ class BinJung(HonestBee):
 
 
 class NewTaipeiCenter(HonestBee):
-
     NAME = '新北市農產中心'
 
     STORE_ID = 2152

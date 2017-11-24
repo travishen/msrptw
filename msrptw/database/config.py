@@ -37,8 +37,8 @@ def init():
                 Alias(name='半')
             ]),
             Part(name='雞胸肉', aliases=[
-                Alias(name='胸肉'),
-                Alias(name='雞胸')
+                Alias(name='清胸'),
+                Alias(name='雞胸'),
             ]),
             Part(name='雞里肌肉', aliases=[
                 Alias(name='里肌')
@@ -170,11 +170,21 @@ def init():
             Part(name='昆布'),
             Part(name='乾香菇', aliases=[
                 Alias(name='香菇'),
-                Alias(name='鈕釦菇')
+                Alias(name='鈕釦菇'),
+                Alias(name='冬菇'),
+                Alias(name='鈕扣菇')
             ]),
             Part(name='木耳'),
             Part(name='奇亞籽'),
-            Part(name='柴魚')
+            Part(name='柴魚'),
+            Part(name='海帶芽'),
+            Part(name='海苔'),
+            Part(name='蝦仁', aliases=[
+                Alias(name='櫻花蝦')
+            ]),
+            Part(name='乾金針', aliases=[
+                Alias(name='金針')
+            ])
         ]
 
         veg = Config(name='蔬菜')
@@ -231,7 +241,9 @@ def init():
             Part(name='茭白筍', aliases=[
                 Alias(name='筊白筍')
             ]),
-            Part(name='芹菜'),
+            Part(name='芹菜', aliases=[
+                Alias(name='西芹')
+            ]),
             Part(name='甜椒', aliases=[
                 Alias(name='青椒'),
                 Alias(name='彩椒')
@@ -275,7 +287,8 @@ def init():
                 Alias(name='脫水', anti=True),
                 Alias(name='紫', anti=True),
                 Alias(name='甘藍'),
-                Alias(name='菜心')
+                Alias(name='高麗菜心'),
+                Alias(name='高山')
             ]),
             Part(name='紫高麗菜', aliases=[
                 Alias(name='高麗菜絲', anti=True),
@@ -301,7 +314,9 @@ def init():
                 Alias(name='山苦瓜')
             ]),
             Part(name='牛蕃茄', aliases=[
-                Alias(name='牛番茄')
+                Alias(name='牛番茄'),
+                Alias(name='蕃茄'),
+                Alias(name='番茄')
             ]),
             Part(name='山藥'),
             Part(name='花椰菜', aliases=[
@@ -344,7 +359,10 @@ def init():
             Part(name='冬瓜'),
             Part(name='洋菇'),
             Part(name='蘆筍'),
-            Part(name='甜菜根'),
+            Part(name='甜菜', aliases=[
+                Alias(name='甜菜心'),
+                Alias(name='甜菜根')
+            ]),
             Part(name='銀耳'),
             Part(name='水蓮'),
             Part(name='蓮藕'),
@@ -374,7 +392,10 @@ def init():
             Part(name='皇宮菜'),
             Part(name='龍鬚菜'),
             Part(name='山蘇'),
-            Part(name='紅鳳菜')
+            Part(name='紅鳳菜'),
+            Part(name='皇帝菜'),
+            Part(name='廣島菜'),
+            Part(name='竹筍')
         ]
 
         fruit = Config(name='水果')
@@ -388,11 +409,15 @@ def init():
 
             ]),
             Part(name='木瓜'),
-            Part(name='葡萄'),
+            Part(name='葡萄', aliases=[
+                Alias(name='葡萄柚', anti=True)
+            ]),
             Part(name='鳳梨'),
             Part(name='火龍果'),
             Part(name='梨'),
-            Part(name='香蕉'),
+            Part(name='香蕉', aliases=[
+                Alias(name='芭蕉')
+            ]),
             Part(name='百香果'),
             Part(name='柳丁'),
             Part(name='葡萄柚'),

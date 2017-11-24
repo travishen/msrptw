@@ -15,6 +15,9 @@ log = logging.getLogger(__name__)
 
 
 class Directory(object):
+    """initialize with class attribute NAME and loads instance
+    attribute from sqlalchemy, as a database entry also provides
+    basic text parsing settings"""
 
     NUM_RE = re.compile('''
             (?:\d+)
@@ -46,16 +49,24 @@ class Directory(object):
     }
 
     UNIT_MAP = {
-        'KG': (0, 1000), 'G': (1, 1), 'g': (1, 1), 'kg': (0, 1000), 'Kg': (0, 1000),
-        '公斤': (0, 1000), '公克': (1, 1), '克': (1, 1)
+        'kg': (0, 1000), 'l': (0, 1000),
+        'g': (1, 1), 'ml': (1, 1), 'cc': (1, 1),
+        '公斤': (0, 1000), '公克': (1, 1), '克': (1, 1),
+        '公升': (0, 1000), '毫升': (1, 1),
     }
 
     UNIT_RE = re.compile('''
         (?:
-            (?P<kg>\d+?.\d+|\d+)(?=KG|kg|Kg|公斤)
+            (?=\D?)
+            (?P<kg>[0-9]+?\.[0-9]+|[0-9]+)(?=kg|公斤|公升|l)
             |
-            (?P<g>\d+?.\d+|\d+)(?=G|g|公克|克)
+            (?=\D?)
+            (?P<g>[0-9]+?\.[0-9]+|[0-9]+)(?=g|公克|克|毫升|ml|cc)
         )
+    ''', re.X)
+
+    MULTI_RE = re.compile('''
+        (?:[*×xX][0-9]+)|(?:[0-9]+[*×xX])
     ''', re.X)
 
     STACK = []
@@ -78,11 +89,16 @@ class Directory(object):
     }
 
     def __init__(self):
+
         if not self.PRODUCT_MAP or not self.NAME:
             raise NotImplementedError
+
         self.date = datetime.date.today().strftime('%Y-%m-%d')
+
         with session_scope() as session:
-            self.configs = session.query(Config).options(subqueryload(Config.parts).subqueryload(Part.aliases)).all()
+            self.configs = session.query(Config).options(
+                subqueryload(Config.parts).subqueryload(Part.aliases)
+            ).all()
             self.market = session.query(Market).filter(Market.name == self.NAME).first()
             session.expunge_all()
 
@@ -105,6 +121,8 @@ class Directory(object):
     @staticmethod
     def get_origin(origin_str, default='其他'):
 
+        origin_str = Directory.normalize(origin_str)
+
         def find(s):
             for key in Directory.ORIGIN_MAP.keys():
                 if key in s:
@@ -123,7 +141,9 @@ class Directory(object):
 
     @classmethod
     def clear_stack(cls):
+
         def set_product_price(pd, pc):
+
             if pd.part_id:
                 pc.product = pd
                 Directory.set_price(pc)
@@ -141,8 +161,7 @@ class Directory(object):
 
         for config, product, price in manuals:
             product = Directory.classify_product_manual(config, product)
-            if product.part_id:
-                set_product_price(product, price)
+            set_product_price(product, price)
 
         cls.STACK = []
 
@@ -153,7 +172,23 @@ class Directory(object):
 
     @classmethod
     def get_weight(cls, weight_str):
+
+        weight_str = cls.normalize(weight_str)
+
+        # 120g*3入 => *3
+        counts = cls.MULTI_RE.findall(weight_str)
+
+        count = 1
+
+        if counts:
+            # 120*3g => 120g
+            weight_str = re.sub(cls.MULTI_RE, '', weight_str)
+            # *3 => 3
+            count_str = ''.join([s for s in counts[0] if s.isalnum()])
+            count = int(count_str)
+
         try:
+            weight_str = weight_str.lower()
             token = cls.UNIT_RE.findall(weight_str)[0]
             for index, multiplier in cls.UNIT_MAP.values():
                 unit_value = token[index]
@@ -163,7 +198,8 @@ class Directory(object):
                     except ValueError:
                         log.error(Directory.ERROR_MAP[0])
                         return None
-                    return unit_value * multiplier
+                    # 120g*3 => 120 * 1 * 3
+                    return unit_value * multiplier * count
         except:
             return None
 
@@ -216,9 +252,14 @@ class Directory(object):
     @staticmethod
     def check_product(product):
         with session_scope() as session:
-            db_product = session.query(Product).filter(Product.pid == product.pid).filter(Product.market_id == product.market_id).first()
+
+            db_product = session.query(Product).filter(
+                Product.pid == product.pid
+            ).filter(
+                Product.market_id == product.market_id
+            ).first()
+
             if db_product:
-                # update product here if needed
                 session.expunge(db_product)
                 return db_product
             return product
@@ -226,9 +267,14 @@ class Directory(object):
     @staticmethod
     def set_price(price):
         with session_scope() as session:
-            db_price = session.query(Price).filter(Price.date == price.date).filter(Price.product_id == price.product.id).first()
+
+            db_price = session.query(Price).filter(
+                Price.date == price.date
+            ).filter(
+                Price.product_id == price.product.id
+            ).first()
+
             if db_price:
                 db_price.price = price.price
-                db_price.weight = price.weight
             else:
                 session.add(price)

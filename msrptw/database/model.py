@@ -63,6 +63,7 @@ class Product(_base):
     name = Column(Unicode(30))
     pid = Column(String(20))
     source = Column(String(255))
+    weight = Column(Integer)
     prices = relationship('Price')
 
 
@@ -72,7 +73,6 @@ class Price(_base):
     product_id = Column(Integer, ForeignKey('product.id'))
     product = relationship('Product', back_populates='prices')
     price = Column(Integer)
-    weight = Column(Integer)
     date = Column(Date)
 
 
