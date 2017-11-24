@@ -22,8 +22,6 @@ class HonestBee(Directory):
     INDEX_ROUTE = 'https://www.honestbee.tw/zh-TW'
     API_ROUTE = 'https://www.honestbee.tw/api/api/departments/%s'
 
-    Fee = 0.01
-
     STACK = []
 
     INFO_MAP = {
@@ -74,8 +72,7 @@ class HonestBee(Directory):
                 weight_str = Directory.normalize(size_str)
                 weight = Directory.get_weight(weight_str)
 
-                # minus service fee
-                price = float(price_str) - weight * HonestBee.Fee
+                price = float(price_str)
 
                 if unit_type == 'unit_type_item':
                     weight = weight * float(amount_str)
