@@ -64,6 +64,7 @@ class Product(_base):
     pid = Column(String(20))
     source = Column(String(255))
     weight = Column(Integer)
+    count = Column(Integer)
     prices = relationship('Price')
 
 
