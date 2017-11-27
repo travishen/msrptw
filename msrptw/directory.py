@@ -8,7 +8,7 @@ from sqlalchemy.orm import subqueryload
 from logging.config import fileConfig
 from . import _logging_config_path
 from .database.config import session_scope
-from .database.model import Market, Product, Config, Origin, Price, Part
+from .database.model import Market, Product, Config, Origin, Price, Part, Unit
 
 fileConfig(_logging_config_path)
 log = logging.getLogger(__name__)
@@ -67,7 +67,11 @@ class Directory(object):
     ''', re.X)
 
     MULTI_RE = re.compile('''
-        (?:[*×xX][0-9]+)|(?:[0-9]+[*×xX])
+        (?:[*×xX][0-9]+)
+        |
+        (?:[0-9]+[*×xX])
+        |
+        (?:[0-9]+)(?=[片粒顆支條包袋盒瓶罐入]) 
     ''', re.X)
 
     STACK = []
@@ -100,6 +104,7 @@ class Directory(object):
             self.configs = session.query(Config).options(
                 subqueryload(Config.parts).subqueryload(Part.aliases)
             ).all()
+            self.units = session.query(Unit).order_by(Unit.level.desc()).all()
             self.market = session.query(Market).filter(Market.name == self.NAME).first()
             session.expunge_all()
 
@@ -117,7 +122,7 @@ class Directory(object):
 
         s = Directory.GLOBAL_REPLACE_RE.sub(replace, s)
 
-        return s
+        return s.lower()
 
     @staticmethod
     def get_origin(origin_str, default='其他'):
@@ -139,6 +144,14 @@ class Directory(object):
             session.expunge(origin)
 
         return origin
+
+    def get_unit(self, unit_str):
+
+        for unit in self.units:
+            if unit.name in unit_str:
+                return unit
+
+        return None
 
     @classmethod
     def clear_stack(cls):
@@ -172,25 +185,27 @@ class Directory(object):
             session.add(product)
 
     @classmethod
-    def get_weight(cls, weight_str):
+    def get_count(cls, s):
 
-        weight_str = cls.normalize(weight_str)
+        s = cls.normalize(s)
 
-        # 120g*3入 => *3
-        counts = cls.MULTI_RE.findall(weight_str)
-
-        count = 1
+        counts = cls.MULTI_RE.findall(s)
 
         if counts:
-            # 120*3g => 120g
-            weight_str = re.sub(cls.MULTI_RE, '', weight_str)
-            # *3 => 3
             count_str = ''.join([s for s in counts[0] if s.isalnum()])
             count = int(count_str)
 
+            return count
+
+        return 1
+
+    @classmethod
+    def get_weight(cls, s):
+
+        s = cls.normalize(s)
+
         try:
-            weight_str = weight_str.lower()
-            token = cls.UNIT_RE.findall(weight_str)[0]
+            token = cls.UNIT_RE.findall(s)[0]
             for index, multiplier in cls.UNIT_MAP.values():
                 unit_value = token[index]
                 if unit_value:
@@ -199,8 +214,8 @@ class Directory(object):
                     except ValueError:
                         log.error(Directory.ERROR_MAP[0])
                         return None
-                    # 120g*3 => 120 * 1 * 3
-                    return unit_value * multiplier * count
+                    # 120g => 120 * 1 * 3
+                    return unit_value * multiplier
         except:
             return None
 
@@ -279,3 +294,9 @@ class Directory(object):
                 db_price.price = price.price
             else:
                 session.add(price)
+
+    @staticmethod
+    def flat_xpath(page, s):
+        s = ''.join(page.xpath(s)).strip()
+        s = Directory.normalize(s)
+        return s

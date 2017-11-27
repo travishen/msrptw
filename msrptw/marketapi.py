@@ -77,6 +77,11 @@ class CarrfourBrowser(MarketApi):
 
     # (category_id, size)
     PRODUCT_MAP = {
+        '常溫商品': [('469', 20), ('2963', 10), ('2964', 10), ('2965', 10), ('468', 10),
+                 ('433', 10), ('434', 10)],
+        '冷藏商品': [('515', 20), ('366', 100), ('52', 35), ('17', 35)],
+        '海鮮': [('2972', 35), ('145', 35), ('172', 35)],
+        '牛肉': [('194', 35)], '羊肉': [('199', 35)],
         '雞肉': [('206', 35)], '豬肉': [('201', 35)],
         '蔬菜': [('215', 15), ('216', 15), ('217', 15), ('218', 15), ('219', 15), ('220', 15),
                ('224', 35), ('223', 15), ('222', 15), ('221', 15)],
@@ -111,29 +116,38 @@ class CarrfourBrowser(MarketApi):
                 name_str = dic.get('Name')
                 price_str = dic.get('Price')
                 special_price = dic.get('SpecialPrice')
-                amount_str = dic.get('ItemQtyPerPack')
+                count_str = dic.get('ItemQtyPerPack')
                 origin_route = dic.get('SeName')
-
                 pid = str(dic.get('Id'))
-                name = CarrfourBrowser.NAME_RE.findall(name_str)[0]
-                weight = Directory.get_weight(name_str)
 
+                # 紅蘿蔔500g => 紅蘿蔔
+                name = self.NAME_RE.findall(name_str)[0]
+
+                # get special price rather than normal price
                 if special_price:
                     price = float(special_price)
                 else:
                     price = float(price_str)
 
-                weight = weight * float(amount_str)
-
-                product_url = CarrfourBrowser.INDEX_ROUTE + origin_route
-                origin_str = CarrfourBrowser.get_origin(product_url)
-
+                # get origin_str and weight_str from page
+                product_url = self.INDEX_ROUTE + origin_route
+                origin_str, weight_str, unit_str = self.get_infos(product_url)
                 origin = Directory.get_origin(origin_str, default='其他')
+
+                if weight_str:
+                    weight = self.get_weight(weight_str)
+                # try to find weight in title
+                else:
+                    weight = self.get_weight(name_str)
+
+                unit = self.get_unit(unit_str)
+
+                count = int(count_str)
 
             except:
                 d = {
                     'Name': name_str,
-                    'ItemQtyPerPack': amount_str,
+                    'ItemQtyPerPack': count_str,
                     'Price': price_str
                 }
                 log.error(Directory.ERROR_MAP[5] % d)
@@ -142,12 +156,14 @@ class CarrfourBrowser(MarketApi):
             price = Price(price=price,
                           date=self.date)
 
-            product = Product(source=CarrfourBrowser.INDEX_ROUTE,
+            product = Product(source=product_url,
                               name=name,
                               market_id=self.market.id,
                               pid=pid,
                               origin=origin,
-                              weight=weight)
+                              weight=weight,
+                              count=count,
+                              unit=unit)
 
             return product, price
 
@@ -167,13 +183,26 @@ class CarrfourBrowser(MarketApi):
         return results
 
     @staticmethod
-    def get_origin(url):
+    def get_infos(url):
+
         res = requests.get(url)
-        parsed_page = html.fromstring(res.content)
-        origin_str = ''.join(parsed_page.xpath(
-            '//div[@id="pro-content2"]//div[contains(string(), "商品來源")]/following-sibling::div[1]/text()'
-        ))
-        return origin_str
+        page = html.fromstring(res.content)
+
+        xpath = Directory.flat_xpath
+
+        origin_str = xpath(page, '''
+            //div[@id="pro-content2"]//div[contains(string(), "商品來源")]/following-sibling::div[1]/text()
+        ''')
+
+        weight_str = xpath(page, '''
+            //div[@id="pro-content2"]//div[contains(string(), "重量")]/following-sibling::div[1]/text()
+        ''')
+
+        unit_str = xpath(page, '''
+            //div[@id="pro-content2"]//div[contains(string(), "容量")]/following-sibling::div[1]/text()
+        ''')
+
+        return origin_str, weight_str, unit_str
 
 
 class HonestBee(MarketApi):
@@ -217,27 +246,31 @@ class HonestBee(MarketApi):
                 unit_type = dic.get('unitType')
                 price_str = dic.get('price')
                 size_str = dic.get('size')
-                amount_str = dic.get('amountPerUnit')
 
-                pid = str(dic.get('id'))
-                name = Directory.normalize(name_str)
+                pid_str = dic.get('pid')
 
-                weight_str = Directory.normalize(size_str)
-                weight = Directory.get_weight(weight_str)
-
+                pid = str(pid_str)
+                name = self.normalize(name_str)
+                weight_str = self.normalize(size_str)
                 price = float(price_str)
 
-                if unit_type == 'unit_type_item':
-                    weight = weight * float(amount_str)
+                # try to find unit in size key
+                count = self.get_count(size_str)
 
-                origin = Directory.get_origin(name, default='臺灣')
+                # try to find weight in size key
+                weight = self.get_weight(weight_str)
+
+                # try to find origin in title key
+                origin = self.get_origin(name_str, default='臺灣')
+
+                # try to find unit in title
+                unit = self.get_unit(name_str)
 
             except:
                 d = {
                     'title': name_str,
                     'unit_type': unit_type,
                     'size': size_str,
-                    'amount_unit': amount_str,
                     'price': price_str
                 }
                 log.error(Directory.ERROR_MAP[5] % d)
@@ -251,7 +284,9 @@ class HonestBee(MarketApi):
                               market_id=self.market.id,
                               pid=pid,
                               origin=origin,
-                              weight=weight)
+                              weight=weight,
+                              count=count,
+                              unit=unit)
 
             return product, price
 
@@ -284,6 +319,14 @@ class Rtmart(HonestBee):
     STORE_ID = 243
 
     PRODUCT_MAP = {
+        '常溫商品': [(9280, ['48425'], 3), (9280, ['48424'], 1),
+                 (9277, ['48399'], 1), (9277, ['48395'], 1),
+                 (9279, ['48420'], 1), (9279, ['48419'], 1),
+                 (9280, ['48426'], 1)],
+        '冷藏商品': [(6982, ['35779'], 2), (6982, ['35773'], 1), (6982, ['35776'], 1), (6982, ['35774'], 1)],
+        '海鮮': [(6989, ['35811'], 1), (6989, ['85719'], 1), (6989, ['35810'], 1)],
+        '牛肉': [(6990, ['35812'], 1)],
+
         '雞肉': [(6990, ['35814'], 2)],
         '豬肉': [(6990, ['35813'], 2)],
         '蔬菜': [(6980, ['37013'], 1), (6980, ['37014'], 1),
@@ -305,6 +348,12 @@ class Carrefour(HonestBee):
     STORE_ID = 74
 
     PRODUCT_MAP = {
+        '常溫商品': [(7203, ['37472'], 2), (7203, ['37473'], 2)],
+        '冷藏商品': [(7204, ['37478'], 2), (7204, ['37479'], 1), (7204, ['37481'], 1),
+                 (7204, ['37484'], 1), (7204, ['37483'], 1)],
+        '海鮮': [(7214, ['37351'], 1), (7214, ['37532'], 1)],
+        '牛肉': [(7211, ['37520'], 1)],
+
         '雞肉': [(7211, ['37522'], 1)],
         '豬肉': [(7211, ['37521'], 1)],
         '水果': [(7213, ['37530'], 1)],

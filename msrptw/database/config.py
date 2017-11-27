@@ -4,7 +4,7 @@ from __future__ import print_function
 from sqlalchemy import create_engine
 from contextlib import contextmanager
 from . import _base, _session
-from .model import Config, Market, Part, Origin, Alias
+from .model import Config, Market, Part, Origin, Alias, Unit
 
 engine = None
 
@@ -494,6 +494,32 @@ def init():
         session.add(jp)
         session.add(kr)
         session.add(other)
+
+        u11 = Unit(name='片', level=1)
+        u12 = Unit(name='粒', level=1)
+        u13 = Unit(name='顆', level=1)
+        u14 = Unit(name='支', level=1)
+        u15 = Unit(name='條', level=1)
+        u16 = Unit(name='瓶', level=1)
+        u17 = Unit(name='罐', level=1)
+        u18 = Unit(name='隻', level=1)
+        u21 = Unit(name='包', level=2)
+        u22 = Unit(name='袋', level=2)
+        u23 = Unit(name='盒', level=2)
+        u31 = Unit(name='組', level=3)
+
+        session.add(u11)
+        session.add(u12)
+        session.add(u13)
+        session.add(u14)
+        session.add(u15)
+        session.add(u16)
+        session.add(u17)
+        session.add(u18)
+        session.add(u21)
+        session.add(u22)
+        session.add(u23)
+        session.add(u31)
 
 
 @contextmanager

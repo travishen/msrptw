@@ -24,7 +24,6 @@ class Part(_base):
     aliases = relationship('Alias')
 
 
-
 class Alias(_base):
     __tablename__ = 'alias'
     id = Column(Integer, Sequence('alias_id_seq'), primary_key=True, nullable=False)
@@ -49,6 +48,13 @@ class Origin(_base):
     products = relationship('Product')
 
 
+class Unit(_base):
+    __tablename__ = 'unit'
+    id = Column(Integer, Sequence('unit_id_seq'), primary_key=True, nullable=False)
+    name = Column(Unicode(5))
+    level = Column(Integer)
+    products = relationship('Product')
+
 class Product(_base):
     __tablename__ = 'product'
     id = Column(Integer, Sequence('product_id_seq'), primary_key=True, nullable=False)
@@ -60,10 +66,12 @@ class Product(_base):
     origin = relationship('Origin', back_populates='products')
     alias_id = Column(Integer, ForeignKey('alias.id'))
     alias = relationship('Alias', back_populates='products')
+    unit_id = Column(Integer, ForeignKey('unit.id'))
+    unit = relationship('Unit', back_populates='products')
     name = Column(Unicode(30))
     pid = Column(String(20))
     source = Column(String(255))
-    weight = Column(Integer)
+    weight = Column(Integer, nullable=True)
     count = Column(Integer)
     prices = relationship('Price')
 
