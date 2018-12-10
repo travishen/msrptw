@@ -1,21 +1,21 @@
-Source:
-----
+![image](https://travis-ci.org/travishen/msrptw.svg?branch=master)
+
+# Source:
 * [頂好](https://sbd-ec.wellcome.com.tw)
 * [愛買](http://www.gohappy.com.tw/shopping/Browse.do?op=vc&cid=31581&sid=12)
 * [大潤發](http://www.rt-mart.com.tw/fresh/)
 * [楓康](http://shop.supermarket.com.tw/)
 * [HonestBee](https://www.honestbee.tw/)
 
-Configs
------
+# Configs
 * Chilled Chicken (Taiwan)
 * Chilled Pork (Taiwan)
 * Fruits
 * Vegetables
 * Grains
 
-Data
------
+# Data
+
 |    | 分類  | 市場名 | 品名               | 單價 | 重量(克) | 每公斤價格 | 來源                             | 
 |----|-----|-----|------------------|----|-------|-------|--------------------------------| 
 | 0  | 紅蘿蔔 | 大潤發 | 台灣紅蘿蔔(格外品)-      | 39 | 1000  | 39.0  | http://www.rt-mart.com.tw      | 
@@ -36,8 +36,8 @@ Data
 | 15 | 紅蘿蔔 | 濱江  | 紅蘿蔔              | 13 | 180   | 72.22 | https://www.honestbee.tw/zh-TW | 
 | 16 | 紅蘿蔔 | 大潤發 | 臺灣紅蘿蔔            | 18 | 200   | 90.0  | https://www.honestbee.tw/zh-TW | 
 
-Usage
------
+# Usage
+
 Collect internet marketing retail price from Taiwan supermarkets
 
 Setup database(e.g. postgresql):
@@ -48,8 +48,8 @@ Build daily data:
 
     $ python -m msrptw.builder --dbpath postgresql+psycopg2://username:password@host/dbname
 
-Classification
------
+# Classification
+
 Automatically
 
     2017-11-21 20:41:49,302 INFO  [msrptw.marketbrowser][MainThread] 將商品澳洲綠豆自動定義為綠豆
@@ -60,5 +60,40 @@ Manually
     無法自動分類商品「活菌豬松阪肉」，產地臺灣，請定義產品類型或放棄(Enter)
     (0): 豬腹脇肉 (1): 豬肩胛肉 (2): 豬肩頸肉 (3): 豬小排 (4): 豬里肌肉 (5): 豬腿肉 (6): 豬絞肉 (7): 豬肉片 (8): 豬肉絲 (9): 豬軟骨 (10): 豬肋骨 (11): 豬排骨 :2
     2017-11-21 20:46:29,653 INFO  [msrptw.marketbrowser][MainThread] 將商品活菌豬松阪肉人工定義為豬肩頸肉
+
+# Local test via PostgreSQL & nosetests
+
+install dev packages
+```
+$ sudo apt-get install postgresql
+$ sudo apt-get install python-psycopg2
+$ sudo apt-get install libpq-dev
+```
+
+install nosetests
+```
+$ pip install nose
+```
+
+remove current pid files
+```
+$ sudo find / -type f -name "postmaster.pid"
+$ sudo rm /var/lib/postgresql/10/main/postmaster.pid
+$ sudo rm /var/lib/postgresql/11/main/postmaster.pid
+```
+
+run test.sh
+```
+./test.sh
+```
+
+references:
+
+* [CREATE DATABASE cannot run inside a transaction block](https://stackoverflow.com/questions/26482777/create-database-cannot-run-inside-a-transaction-block)
+* [Postgres could not connect to server](https://stackoverflow.com/questions/13410686/postgres-could-not-connect-to-server)
+* [You need to install postgresql-server-dev-X.Y for building a server-side extension or libpq-dev for building a client-side application](https://stackoverflow.com/questions/28253681/you-need-to-install-postgresql-server-dev-x-y-for-building-a-server-side-extensi)
+
+
+
 
 

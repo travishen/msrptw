@@ -1,0 +1,4 @@
+lxml==4.2.5
+pathos==0.2.2.1
+requests==2.20.1
+SQLAlchemy==1.2.14

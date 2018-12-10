@@ -24,7 +24,7 @@ class MarketApi(Directory):
     further with Directory methods"""
     __meta__ = abc.ABCMeta
 
-    @abc.abstractstaticmethod
+    @abc.abstractmethod
     def api(self):
         return
 

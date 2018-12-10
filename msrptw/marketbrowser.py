@@ -5,7 +5,10 @@ import abc
 import requests
 import re
 import logging
-import urllib.parse as urlparse
+try:
+    from urlparse import urlparse
+except:
+    from urllib import parse as urlparse
 from lxml import html
 from logging.config import fileConfig
 from pathos.pools import _ThreadPool
@@ -25,7 +28,7 @@ class MarketBrowser(Directory):
     and Price instance and do further with Directory methods"""
     __metaclass__ = abc.ABCMeta
 
-    @abc.abstractstaticmethod
+    @abc.abstractmethod
     def get_product_urls(self):
         return
 
@@ -106,6 +109,9 @@ class WellcomeBrowser(MarketBrowser):
     def __init__(self):
         super(WellcomeBrowser, self).__init__()
 
+    def __repr__(self):
+        return 'WellcomeBrowser()'
+
     @staticmethod
     def get_product_urls(map_str):
         url = WellcomeBrowser.PRODUCTS_ROUTE % (map_str[0], map_str[1])
@@ -139,8 +145,8 @@ class WellcomeBrowser(MarketBrowser):
             if not weight:
                 count = self.get_count(spec_str)
 
-            # product/view/3001 => 3001
-            pid = Directory.NUM_RE.findall(url)[-1]
+            # product/view/POOYb => POOYb
+            pid = Directory.STR_RE.findall(url)[-1]
 
             # 產地：台灣 => Origin(name='臺灣')
             origin = self.get_origin(origin_str)
@@ -151,7 +157,8 @@ class WellcomeBrowser(MarketBrowser):
             # try to find unit in spec and title
             unit = self.get_unit(name_str + spec_str)
 
-        except:
+        except Exception as e:
+            logging.exception(e)
             log.error(Directory.ERROR_MAP[3] % (name_str, url))
             return None, None
 
@@ -204,6 +211,9 @@ class GeantBrowser(MarketBrowser):
 
     def __init__(self):
         super(GeantBrowser, self).__init__()
+
+    def __repr__(self):
+        return 'GeantBrowser()'
 
     @staticmethod
     def get_product_urls(map_str):
@@ -341,6 +351,9 @@ class FengKangBrowser(MarketBrowser):
     def __init__(self):
         super(FengKangBrowser, self).__init__()
 
+    def __repr__(self):
+        return 'FengKangBrowser()'
+
     @staticmethod
     def get_product_urls(map_str):
         url = FengKangBrowser.PRODUCTS_ROUTE % (map_str[0], map_str[1], map_str[2], map_str[3])
@@ -440,6 +453,9 @@ class RtmartBrowser(MarketBrowser):
 
     def __init__(self):
         super(RtmartBrowser, self).__init__()
+
+    def __repr__(self):
+        return 'FengKangBrowser()'
 
     @staticmethod
     def get_product_urls(map_str):

@@ -23,6 +23,10 @@ class Directory(object):
             (?:\d+)
     ''', re.X)
 
+    STR_RE = re.compile('''
+            (?:\w+)
+    ''', re.X)
+
     GLOBAL_REPLACE_RE = re.compile('''
         [ 　台]
         |

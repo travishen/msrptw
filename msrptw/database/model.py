@@ -55,6 +55,7 @@ class Unit(_base):
     level = Column(Integer)
     products = relationship('Product')
 
+
 class Product(_base):
     __tablename__ = 'product'
     id = Column(Integer, Sequence('product_id_seq'), primary_key=True, nullable=False)
