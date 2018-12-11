@@ -18,9 +18,6 @@ def build(db_path, setup):
         w = marketbrowser.WellcomeBrowser()
         w.direct()
 
-        g = marketbrowser.GeantBrowser()
-        g.direct()
-
         f = marketbrowser.FengKangBrowser()
         f.direct()
 

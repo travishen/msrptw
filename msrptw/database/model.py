@@ -14,6 +14,12 @@ class Config(_base):
     name = Column(Unicode(5))
     parts = relationship('Part')
 
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
+
 
 class Part(_base):
     __tablename__ = 'part'
@@ -23,6 +29,12 @@ class Part(_base):
     products = relationship('Product')
     name = Column(Unicode(15))
     aliases = relationship('Alias')
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
 
 
 class Alias(_base):
@@ -34,12 +46,24 @@ class Alias(_base):
     anti = Column(Boolean, default=False)
     products = relationship('Product')
 
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
+
 
 class Market(_base):
     __tablename__ = 'market'
     id = Column(Integer, Sequence('market_id_seq'), primary_key=True, nullable=False)
     name = Column(Unicode(10))
     products = relationship('Product')
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
 
 
 class Origin(_base):
@@ -48,6 +72,12 @@ class Origin(_base):
     name = Column(Unicode(5))
     products = relationship('Product')
 
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
+
 
 class Unit(_base):
     __tablename__ = 'unit'
@@ -55,6 +85,12 @@ class Unit(_base):
     name = Column(Unicode(5))
     level = Column(Integer)
     products = relationship('Product')
+
+    def __unicode__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
 
 
 class Product(_base):
@@ -77,6 +113,18 @@ class Product(_base):
     count = Column(Integer)
     prices = relationship('Price')
 
+    def __unicode__(self):
+        unit = None
+        if self.unit:
+            unit = self.unit.name
+        return 'Product(name=%s, unit=%s, weight=%s)' % (self.name, unit, self.weight)
+
+    def __str__(self):
+        unit = None
+        if self.unit:
+            unit = self.unit.name
+        return 'Product(name=%s, unit=%s, weight=%s)' % (self.name, unit, self.weight)
+
 
 class Price(_base):
     __tablename__ = 'price'
@@ -85,6 +133,18 @@ class Price(_base):
     product = relationship('Product', back_populates='prices')
     price = Column(Integer)
     date = Column(Date)
+
+    def __unicode__(self):
+        product = None
+        if self.product:
+            product = product.name
+        return 'Price(product=%s, price=%s, date=%s)' % (product, self.price, self.date)
+
+    def __str__(self):
+        product = None
+        if self.product:
+            product = product.name
+        return 'Price(product=%s, price=%s, date=%s)' % (product, self.price, self.date)
 
 
 class Log(_base):
@@ -105,7 +165,6 @@ class Log(_base):
         return self.__repr__()
 
     def __repr__(self):
-
         return '<Log: %s - %s>' % (self.created_at.strftime('%m/%d/%Y-%H:%M:%S'), self.msg[:50])
 
 

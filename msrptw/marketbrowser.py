@@ -74,13 +74,14 @@ class MarketBrowser(Directory):
 
     @staticmethod
     def get_html(url):
+        header = {
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.80 Safari/537.36',
+        }
         try:
-            res = requests.get(url, timeout=30)
+            res = requests.get(url, timeout=30, headers=header)
             parsed_page = html.fromstring(res.content)
         except requests.exceptions.Timeout:
             log.error(Directory.ERROR_MAP[4] % url)
-            return html.Element('html')
-        except:
             return html.Element('html')
 
         return parsed_page
@@ -94,12 +95,11 @@ class WellcomeBrowser(MarketBrowser):
     INDEX_ROUTE = 'https://sbd-ec.wellcome.com.tw'
 
     PRODUCT_MAP = {
-        '常溫商品': [(31, 34), (31, 37), (31, 40), (31, 41), (31, 42), (31, 43)],
-        '冷藏商品': [(113, 114), (103, 104), (96, 97), (96, 98), (108, 109), (108, 111)],
         '海鮮': [(20, 21), (20, 22), (20, 23), (20, 24)],
-        '牛肉': [(12, 15), (12, 18)],
-        '雞肉': [(12, 13)], '豬肉': [(12, 14), (12, 17)],
-        '雜貨': [(31, 35)], '蔬菜': [(7, 8), (7, 9), (7, 10)],
+        '牛肉': [(12, 15)],
+        '雞肉': [(12, 13)],
+        '豬肉': [(12, 14)],
+        '蔬菜': [(7, 8), (7, 9), (7, 10)],
         '水果': [(2, 4), (2, 6)]
     }
 
@@ -160,139 +160,6 @@ class WellcomeBrowser(MarketBrowser):
 
         except Exception as e:
             logging.exception(e)
-            log.error(Directory.ERROR_MAP[3] % (name_str, url))
-            return None, None
-
-        product = Product(source=url,
-                          name=name,
-                          origin=origin,
-                          market_id=self.market.id,
-                          pid=pid,
-                          weight=weight,
-                          count=count,
-                          unit=unit)
-
-        price = Price(price=price, date=self.date)
-
-        return product, price
-
-
-class GeantBrowser(MarketBrowser):
-
-    NAME = '愛買'
-
-    PRODUCTS_ROUTE = 'http://www.gohappy.com.tw/shopping/Browse.do?op=vc&cid=%s&sid=12'
-    INDEX_ROUTE = 'http://www.gohappy.com.tw'
-
-    PRODUCT_MAP = {
-        '常溫商品': ['52509', '161719', '291776', '296465', '296568', '5008'],
-        '冷藏商品': ['161464', '161720', '161762', '301327', '301328', '53915', '53909'],
-        '海鮮': ['210977', '210975'],
-        '牛肉': ['215205'],
-        '雞肉': ['301299'], '豬肉': ['212375'],
-        '雜貨': ['295095'], '蔬菜': ['29979', '358367', '161460&cp=1', '161460&cp=2', '215204', '161755'],
-        '水果': ['208879']
-    }
-
-    NAME_RE = re.compile('''
-        (?:.+?)(?=\d+.*|$)
-    ''', re.X)
-
-    ORIGIN_RE = re.compile('''
-        (?<=產地：)(.*?)\W
-    ''', re.X)
-
-    COUNT_RE = re.compile('''
-        (?<=數量：)(.*?)\W
-    ''', re.X)
-
-    WEIGHT_RE = re.compile('''
-        (?<=規格：)(.*?)\W
-    ''', re.X)
-
-    def __init__(self):
-        super(GeantBrowser, self).__init__()
-
-    def __repr__(self):
-        return 'GeantBrowser()'
-
-    @staticmethod
-    def get_product_urls(map_str):
-        url = GeantBrowser.PRODUCTS_ROUTE % (map_str)
-        page = MarketBrowser.get_html(url)
-        urls = page.xpath('//ul[@class="product_list"]//h5/a/@href')
-        return [GeantBrowser.INDEX_ROUTE + url for url in set(urls)]
-
-    def get_product_price(self, url):
-
-        page = MarketBrowser.get_html(url)
-
-        xpath = Directory.flat_xpath
-
-        name_str = xpath(page, '//h3[@class="trade_Name"]/text()')
-
-        intro_str = xpath(page, '//dd[@class="introduction"]/text()')
-
-        content_origin_str = xpath(page, '//div[@class="product_content"]//tr[contains(string(), "產地")]/td[2]//text()')
-
-        content_unit_str = xpath(page, '//div[@class="product_content"]//tr[contains(string(), "數量")]/td[2]//text()')
-
-        price_str = xpath(page, '//dd[@class="list_price"]/text()')
-
-        try:
-
-            # 大成去骨雞腿1盒 => 大成去骨雞腿
-            name = GeantBrowser.NAME_RE.findall(name_str)[0]
-
-            # try to find origin in introduction
-            try:
-                origin_str = GeantBrowser.ORIGIN_RE.findall(intro_str)[0]
-
-            # try content table, could be ''
-            except IndexError:
-                origin_str = content_origin_str
-
-            origin = self.get_origin(origin_str)
-
-            # try to find count in introduction
-            try:
-                count_str = GeantBrowser.COUNT_RE.findall(intro_str)[0]
-                count = Directory.get_count(count_str)
-
-            # try to find count in title, or 1
-            except IndexError:
-                count = Directory.get_count(name_str)
-
-            # try to find spec in introduction
-            try:
-                spec_str = GeantBrowser.WEIGHT_RE.findall(intro_str)[0]
-                weight = self.get_weight(spec_str)
-
-                # test weight with title weight
-                test_weight = self.get_weight(name_str)
-                if test_weight and weight != test_weight:
-                    weight = test_weight
-
-            # try to find spec in title
-            except IndexError:
-                weight = self.get_weight(name_str)
-
-            # &pid=4940444 => 4940444
-            pid = urlparse.parse_qs(url)['pid'][0]
-
-            price = int(price_str)
-
-            # try to find unit in title, introduction, content table
-            try:
-                unit_str = GeantBrowser.COUNT_RE.findall(intro_str)[0]
-                unit_str += name_str
-                unit_str += content_unit_str
-            except IndexError:
-                unit_str = name_str + content_unit_str
-
-            unit = self.get_unit(unit_str)
-
-        except:
             log.error(Directory.ERROR_MAP[3] % (name_str, url))
             return None, None
 

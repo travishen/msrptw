@@ -78,16 +78,12 @@ class CarrfourBrowser(MarketApi):
 
     # (category_id, size)
     PRODUCT_MAP = {
-        '常溫商品': [('469', 20), ('2963', 10), ('2964', 10), ('2965', 10), ('468', 10),
-                 ('433', 10), ('434', 10)],
-        '冷藏商品': [('515', 20), ('366', 100), ('52', 35), ('17', 35)],
         '海鮮': [('2972', 35), ('145', 35), ('172', 35)],
         '牛肉': [('194', 35)], '羊肉': [('199', 35)],
         '雞肉': [('206', 35)], '豬肉': [('201', 35)],
         '蔬菜': [('215', 15), ('216', 15), ('217', 15), ('218', 15), ('219', 15), ('220', 15),
                ('224', 35), ('223', 15), ('222', 15), ('221', 15)],
         '水果': [('231', 70)],
-        '雜貨': [('471', 100), ('522', 20), ('527', 20)]
     }
 
     NAME_RE = re.compile('''
@@ -402,3 +398,104 @@ class NewTaipeiCenter(HonestBee):
         '水果': [(9552, ['49703'], 1), (9552, ['49699'], 1),
                (9552, ['49700'], 1)]
     }
+
+
+class Geant(MarketApi):
+
+    NAME = '愛買'
+
+    API_ROUTE = 'https://shopping.friday.tw/ec2/getBottomCategoryProduct'
+    INDEX_ROUTE = 'https://shopping.friday.tw'
+
+    PRODUCT_MAP = {
+        '海鮮': ['384550', '384324'],
+        '牛肉': ['384298'],
+        '雞肉': ['384422'],
+        '豬肉': ['384306'],
+        '蔬菜': ['384229', '384269', '384531', '384264', '384549'],
+        '水果': ['392333', '392334'],
+    }
+
+    def __init__(self):
+        super(Geant, self).__init__()
+
+    def __repr__(self):
+        return 'Geant()'
+
+    @staticmethod
+    def api(config_id, hook=None):
+
+        params = {
+            'cid': config_id,
+        }
+
+        res = requests.get(Geant.API_ROUTE, params=params)
+        dic = json.loads(res.text, object_hook=hook)
+        return dic['pageModel']['contentBlock']['itemList'][0]['bottomCategoryProducts']
+
+    def get_products_prices(self, map_str):
+
+        def hook(dic):
+
+            try:
+                name_str = dic.get('productName', None)
+                if name_str:
+                    name = self.normalize(name_str)
+
+                pid = dic.get('productId', None)
+
+                price_str = dic.get('salePrice', None)
+                if price_str:
+                    price = float(price_str)
+
+                info_str = dic.get('descSpecification', '')
+
+                # try to find unit in size key
+                count = self.get_count(info_str)
+
+                # try to find weight in size key
+                weight = self.get_weight(info_str)
+
+                # try to find origin in title key
+                origin = self.get_origin(name_str, default='臺灣')
+
+                # try to find unit in title
+                unit = self.get_unit(name_str)
+
+            except:
+                if name_str or info_str or price_str:
+                    d = {
+                        'title': name_str,
+                        'info': info_str,
+                        'price': price_str
+                    }
+                    log.error(Directory.ERROR_MAP[5] % d)
+                return dic
+
+            price = Price(price=price,
+                          date=self.date)
+
+            product = Product(source=Geant.INDEX_ROUTE,
+                              name=name,
+                              market_id=self.market.id,
+                              pid=pid,
+                              origin=origin,
+                              weight=weight,
+                              count=count,
+                              unit=unit)
+
+            return product, price
+
+        results = []
+
+        ps = self.api(config_id=map_str,
+                      hook=hook)
+
+        for item in ps:
+            try:
+                if isinstance(item[0], Product) and isinstance(item[1], Price):
+                    results.append(item)
+            except KeyError:
+                pass
+
+        return results
